@@ -1,0 +1,40 @@
+syntax = "v1"
+
+info (
+	title:   "short url"
+	desc:    "Convert short url to long url"
+	author:  "AIXIA"
+	email:   "906094554@qq.com"
+	version: "v1.0"
+)
+
+//将长链接转化为短链接
+type ConvertRequest {
+	LongUrl string `json:"long_url"`
+}
+
+type ConvertResponse {
+	ShortUrl string `json:"short_url"`
+}
+
+//将短链接转化为长链接
+type ShowRequest {
+	ShortUrl string `json:"short_url"`
+}
+
+type ShowResponse {
+	LongUrl string `json:"long_url"`
+}
+
+@server (
+	jwt:   Auth
+	group: api
+)
+service Shortener-api {
+	@handler ConvertHandler
+	post /convert (ConvertRequest) returns (ConvertResponse)
+
+	@handler ShowHandler
+	post /show (ShowRequest) returns (ShowResponse)
+}
+

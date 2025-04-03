@@ -1,0 +1,14 @@
+Name: Shortener-api
+Mode: ${APP_ENV}
+Host: 0.0.0.0
+Port: ${APP_PORT}
+
+Auth:
+  AccessSecret: ${ACCESS_SECRET}
+  AccessExpire: 86400
+
+ShortUrlDB:
+  DSN: ${DB_USER}:${DB_PASSWORD}@tcp(${DB_HOST}:${DB_PORT})/${DB_NAME}?charset=utf8mb4&parseTime=true&collation=utf8mb4_unicode_ci
+
+Sequence:
+  DSN: ${DB_USER}:${DB_PASSWORD}@tcp(${DB_HOST}:${DB_PORT})/${DB_NAME}?charset=utf8mb4&parseTime=true&collation=utf8mb4_unicode_ci
