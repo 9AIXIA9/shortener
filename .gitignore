@@ -41,10 +41,6 @@ Desktop.ini
 .env*
 *.env
 
-# --- 模版文件 ---
-mysql/initdb/init.sql
-my_redis/redis_acl/users.acl
-
 # --- 测试相关 ---
 coverage/
 .nyc_output/
