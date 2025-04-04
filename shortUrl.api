@@ -28,7 +28,7 @@ type ShowResponse {
 
 @server (
 	jwt:   Auth
-	group: api
+	group: shortener
 )
 service Shortener-api {
 	@handler ConvertHandler

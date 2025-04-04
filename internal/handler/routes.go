@@ -6,7 +6,7 @@ package handler
 import (
 	"net/http"
 
-	api "shortener/internal/handler/api"
+	shortener "shortener/internal/handler/shortener"
 	"shortener/internal/svc"
 
 	"github.com/zeromicro/go-zero/rest"
@@ -18,12 +18,12 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 			{
 				Method:  http.MethodPost,
 				Path:    "/convert",
-				Handler: api.ConvertHandler(serverCtx),
+				Handler: shortener.ConvertHandler(serverCtx),
 			},
 			{
 				Method:  http.MethodPost,
 				Path:    "/show",
-				Handler: api.ShowHandler(serverCtx),
+				Handler: shortener.ShowHandler(serverCtx),
 			},
 		},
 		rest.WithJwt(serverCtx.Config.Auth.AccessSecret),

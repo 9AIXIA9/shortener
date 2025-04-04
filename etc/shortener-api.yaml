@@ -3,6 +3,13 @@ Mode: ${APP_ENV}
 Host: 0.0.0.0
 Port: ${APP_PORT}
 
+Operator: ${operator}
+
+CacheRedis:
+  - Host: ${REDIS_HOST}:${REDIS_PORT}
+    Pass: ${REDIS_PASSWORD}
+    Type: node
+
 Auth:
   AccessSecret: ${ACCESS_SECRET}
   AccessExpire: 86400
