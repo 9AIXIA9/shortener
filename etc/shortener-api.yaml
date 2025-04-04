@@ -14,8 +14,16 @@ Auth:
   AccessSecret: ${ACCESS_SECRET}
   AccessExpire: 86400
 
-ShortUrlDB:
-  DSN: ${DB_USER}:${DB_PASSWORD}@tcp(${DB_HOST}:${DB_PORT})/${DB_NAME}?charset=utf8mb4&parseTime=true&collation=utf8mb4_unicode_ci
+ShortUrlMap:
+  User: ${SHORT_URL_MAP_DB_USER}
+  Password: ${SHORT_URL_MAP_DB_PASSWORD}
+  Host: ${SHORT_URL_MAP_DB_HOST}
+  Port: ${SHORT_URL_MAP_DB_PORT}
+  DBName: ${SHORT_URL_MAP_DB_NAME}
 
 Sequence:
-  DSN: ${DB_USER}:${DB_PASSWORD}@tcp(${DB_HOST}:${DB_PORT})/${DB_NAME}?charset=utf8mb4&parseTime=true&collation=utf8mb4_unicode_ci
+  User: ${SEQUENCE_DB_USER}
+  Password: ${SEQUENCE_DB_PASSWORD}
+  Host: ${SEQUENCE_DB_HOST}
+  Port: ${SEQUENCE_DB_PORT}
+  DBName: ${SEQUENCE_DB_NAME}

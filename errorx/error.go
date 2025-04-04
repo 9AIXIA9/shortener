@@ -3,6 +3,7 @@ package errorx
 // 自定义错误码
 const (
 	CodeInternal Code = 1000 + iota
+	CodeConfig
 	CodeLogic
 	CodeMysql
 	CodeRedis
