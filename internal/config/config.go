@@ -1,13 +1,20 @@
 package config
 
-import "github.com/zeromicro/go-zero/rest"
+import (
+	"github.com/zeromicro/go-zero/core/stores/cache"
+	"github.com/zeromicro/go-zero/rest"
+)
 
 type Config struct {
 	rest.RestConf
 
+	Operator string
+
 	ShortUrlDB ShortUrlDB
 
-	Sequence Sequence
+	SequenceDB SequenceDB
+
+	CacheRedis cache.CacheConf
 
 	Auth struct {
 		AccessSecret string
@@ -19,6 +26,6 @@ type ShortUrlDB struct {
 	DSN string
 }
 
-type Sequence struct {
+type SequenceDB struct {
 	DSN string
 }
