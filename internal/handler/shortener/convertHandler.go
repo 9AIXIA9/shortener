@@ -1,10 +1,12 @@
-package api
+package shortener
 
 import (
+	"github.com/zeromicro/go-zero/core/logx"
 	"net/http"
+	"shortener/pkg/validate"
 
 	"github.com/zeromicro/go-zero/rest/httpx"
-	"shortener/internal/logic/api"
+	"shortener/internal/logic/shortener"
 	"shortener/internal/svc"
 	"shortener/internal/types"
 )
@@ -17,7 +19,14 @@ func ConvertHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 			return
 		}
 
-		l := api.NewConvertLogic(r.Context(), svcCtx)
+		//参数校验
+		if err := validate.Get().StructCtx(r.Context(), &req); err != nil {
+			logx.Infow("validator check failed", logx.Field("err", err))
+			httpx.ErrorCtx(r.Context(), w, err)
+			return
+		}
+
+		l := shortener.NewConvertLogic(r.Context(), svcCtx)
 		resp, err := l.Convert(&req)
 		if err != nil {
 			httpx.ErrorCtx(r.Context(), w, err)

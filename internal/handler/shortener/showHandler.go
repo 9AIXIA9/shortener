@@ -1,10 +1,10 @@
-package api
+package shortener
 
 import (
 	"net/http"
 
 	"github.com/zeromicro/go-zero/rest/httpx"
-	"shortener/internal/logic/api"
+	"shortener/internal/logic/shortener"
 	"shortener/internal/svc"
 	"shortener/internal/types"
 )
@@ -17,7 +17,7 @@ func ShowHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 			return
 		}
 
-		l := api.NewShowLogic(r.Context(), svcCtx)
+		l := shortener.NewShowLogic(r.Context(), svcCtx)
 		resp, err := l.Show(&req)
 		if err != nil {
 			httpx.ErrorCtx(r.Context(), w, err)

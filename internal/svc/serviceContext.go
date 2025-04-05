@@ -7,20 +7,18 @@ import (
 )
 
 type ServiceContext struct {
-	Config      config.Config
-	Sequence    model.SequenceModel
-	ShortUrlMap model.ShortUrlMapModel
+	Config           config.Config
+	SequenceModel    model.SequenceModel
+	ShortUrlMapModel model.ShortUrlMapModel
 }
 
 func NewServiceContext(c config.Config) *ServiceContext {
 	conn := sqlx.NewMysql(c.ShortUrlMap.DSN())
-
-	model.NewShortUrlMapModel(conn, c.CacheRedis)
-
-	conn = sqlx.NewMysql(c.Sequence.DSN())
-	model.NewSequenceModel(conn, c.CacheRedis)
+	conn2 := sqlx.NewMysql(c.Sequence.DSN())
 
 	return &ServiceContext{
-		Config: c,
+		Config:           c,
+		SequenceModel:    model.NewSequenceModel(conn, c.CacheRedis),
+		ShortUrlMapModel: model.NewShortUrlMapModel(conn2, c.CacheRedis),
 	}
 }
