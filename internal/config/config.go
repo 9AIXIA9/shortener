@@ -9,7 +9,7 @@ import (
 type Config struct {
 	rest.RestConf
 
-	Operator string
+	AppConf
 
 	ShortUrlMap MysqlConf
 
@@ -21,6 +21,10 @@ type Config struct {
 		AccessSecret string
 		AccessExpire int64
 	}
+}
+
+type AppConf struct {
+	Operator string
 }
 
 type MysqlConf struct {

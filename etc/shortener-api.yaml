@@ -3,7 +3,8 @@ Mode: ${APP_ENV}
 Host: 0.0.0.0
 Port: ${APP_PORT}
 
-Operator: ${operator}
+AppConfig:
+  Operator: ${OPERATOR}
 
 CacheRedis:
   - Host: ${REDIS_HOST}:${REDIS_PORT}

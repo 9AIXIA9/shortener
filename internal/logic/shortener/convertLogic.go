@@ -9,6 +9,7 @@ import (
 	"shortener/internal/model"
 	"shortener/internal/svc"
 	"shortener/internal/types"
+	"shortener/pkg/base62"
 	"shortener/pkg/connect"
 	"shortener/pkg/errorx"
 	"shortener/pkg/md5"
@@ -77,13 +78,7 @@ func (l *ConvertLogic) Convert(req *types.ConvertRequest) (resp *types.ConvertRe
 	}
 
 	//转链
-	shortUrl, err := l.convertSequenceIDIntoShortUrl(id)
-	if err != nil {
-		return nil, errorx.Log(errorx.ErrorLevel, errorx.CodeInternal,
-			"convert long links into short link failed",
-			logx.Field("long URL", req.LongUrl),
-			logx.Field("err", err))
-	}
+	shortUrl := l.convertSequenceIDIntoShortUrl(id)
 
 	//存储映射
 	err = l.storeInRepository(m, req.LongUrl, shortUrl)
@@ -152,24 +147,9 @@ func (l *ConvertLogic) getSequenceID() (uint64, error) {
 }
 
 // 转链
-func (l *ConvertLogic) convertSequenceIDIntoShortUrl(id uint64) (string, error) {
-	const chars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-	const base = uint64(len(chars))
-
-	var result []byte
-	num := id
-
-	for num > 0 {
-		result = append(result, chars[num%base])
-		num = num / base
-	}
-
-	// 反转结果
-	for i, j := 0, len(result)-1; i < j; i, j = i+1, j-1 {
-		result[i], result[j] = result[j], result[i]
-	}
-
-	return string(result), nil
+func (l *ConvertLogic) convertSequenceIDIntoShortUrl(id uint64) string {
+	return base62.Convert(id)
+	//todo 避免敏感词
 }
 
 // 数据持久化
