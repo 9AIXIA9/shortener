@@ -3,6 +3,7 @@ package shortener
 import (
 	"github.com/zeromicro/go-zero/core/logx"
 	"net/http"
+	"shortener/pkg/connect"
 	"shortener/pkg/validate"
 
 	"github.com/zeromicro/go-zero/rest/httpx"
@@ -26,7 +27,7 @@ func ConvertHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 			return
 		}
 
-		l := shortener.NewConvertLogic(r.Context(), svcCtx)
+		l := shortener.NewConvertLogic(r.Context(), svcCtx, connect.NewClient())
 		resp, err := l.Convert(&req)
 		if err != nil {
 			httpx.ErrorCtx(r.Context(), w, err)
