@@ -1,24 +1,20 @@
 package svc
 
 import (
-	"github.com/zeromicro/go-zero/core/stores/sqlx"
 	"shortener/internal/config"
-	"shortener/internal/model"
+	"shortener/internal/repository"
 )
 
 type ServiceContext struct {
-	Config           config.Config
-	SequenceModel    model.SequenceModel
-	ShortUrlMapModel model.ShortUrlMapModel
+	Config                config.Config
+	SequenceRepository    repository.Sequence
+	ShortUrlMapRepository repository.ShortUrlMap
 }
 
 func NewServiceContext(c config.Config) *ServiceContext {
-	conn := sqlx.NewMysql(c.ShortUrlMap.DSN())
-	conn2 := sqlx.NewMysql(c.Sequence.DSN())
-
 	return &ServiceContext{
-		Config:           c,
-		SequenceModel:    model.NewSequenceModel(conn, c.CacheRedis),
-		ShortUrlMapModel: model.NewShortUrlMapModel(conn2, c.CacheRedis),
+		Config:                c,
+		ShortUrlMapRepository: repository.NewShortUrlMap(c.ShortUrlMap.DSN(), c.CacheRedis),
+		SequenceRepository:    repository.NewSequence(c.Sequence.DSN()),
 	}
 }
