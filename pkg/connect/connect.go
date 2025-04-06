@@ -1,6 +1,7 @@
 package connect
 
 import (
+	"fmt"
 	"github.com/zeromicro/go-zero/core/logx"
 	"net/http"
 	"time"
@@ -15,18 +16,17 @@ func NewClient() *http.Client {
 }
 
 // Check 测试 URL 连通性
-func Check(client *http.Client, url string) bool {
+func Check(client *http.Client, url string) (bool, error) {
 	// 尝试连接
 	resp, err := client.Get(url)
 	if err != nil {
-		logx.Errorw("connect get url failed", logx.Field("url", url), logx.Field("err", err))
-		return false
+		return false, fmt.Errorf("connect get url failed,err:%w", err)
 	}
 	defer func() {
-		if err := resp.Body.Close(); err != nil {
+		if err = resp.Body.Close(); err != nil {
 			logx.Errorw("connect close resp body failed", logx.Field("url", url), logx.Field("err", err))
 		}
 	}()
 
-	return resp.StatusCode == http.StatusOK
+	return resp.StatusCode == http.StatusOK, nil
 }

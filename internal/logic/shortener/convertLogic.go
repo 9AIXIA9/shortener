@@ -3,6 +3,7 @@ package shortener
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 	"shortener/internal/model"
@@ -11,6 +12,7 @@ import (
 	"shortener/pkg/connect"
 	"shortener/pkg/errorx"
 	"shortener/pkg/md5"
+	"shortener/pkg/urlTool"
 )
 
 type ConvertLogic struct {
@@ -29,45 +31,54 @@ func NewConvertLogic(ctx context.Context, svcCtx *svc.ServiceContext) *ConvertLo
 
 func (l *ConvertLogic) Convert(req *types.ConvertRequest) (resp *types.ConvertResponse, err error) {
 	//校验参数
-	ok := l.checkUrlValid(req.LongUrl)
+	ok, err := l.checkUrlValid(req.LongUrl)
+	if err != nil {
+		return nil, errorx.Log(errorx.Error, errorx.CodeInternal,
+			"There was an error inside the server",
+			logx.Field("url", req.LongUrl), logx.Field("err", err))
+	}
 	if !ok {
-		return nil, errorx.Log(errorx.Info, errorx.CodeLogic, "the url entered is invalid",
+		return nil, errorx.Log(errorx.Info, errorx.CodeLogic,
+			"the url entered is invalid",
 			logx.Field("url", req.LongUrl))
 	}
 
-	//生成长链接的MD5值
-	m, err := l.convertMD5(req.LongUrl)
-	if err != nil {
-		return nil, errorx.Log(errorx.Error, errorx.CodeInternal, "convert long links into MD5 failed",
-			logx.Field("long URL", req.LongUrl), logx.Field("err", err))
-	}
-
 	//检查此链接是否已有转链
-	data, err := l.svcCtx.ShortUrlMapModel.FindOneByMd5(l.ctx, m)
-	if err != nil && !errors.Is(err, sqlx.ErrNotFound) {
-		return nil, errorx.Log(errorx.Error, errorx.CodeInternal, "check if this URL exists failed in the database",
-			logx.Field("long URL", req.LongUrl),
+	//计算长链接的MD5
+	m, err := md5.Sum([]byte(req.LongUrl))
+	if err != nil {
+		return nil, errorx.Log(errorx.Error, errorx.CodeInternal,
+			"long url sum md5 failed",
+			logx.Field("long url", req.LongUrl),
 			logx.Field("err", err))
 	}
 
-	//已存在现有短链接
+	//数据库查询MD5
+	data, err := l.svcCtx.ShortUrlMapModel.FindOneByMd5(l.ctx, m)
+	if err != nil && !errors.Is(err, sqlx.ErrNotFound) {
+		return nil, errorx.Log(errorx.Error, errorx.CodeInternal,
+			"ShortUrlMapModel.FindOneByMd5 failed",
+			logx.Field("long url", req.LongUrl),
+			logx.Field("err", err))
+	}
+
 	if len(data.ShortUrl) != 0 || !errors.Is(err, sqlx.ErrNotFound) {
-		return &types.ConvertResponse{
-			ShortUrl: data.ShortUrl,
-		}, nil
+		return &types.ConvertResponse{ShortUrl: data.ShortUrl}, nil
 	}
 
 	//取号
 	id, err := l.getID()
 	if err != nil {
-		return nil, errorx.Log(errorx.Error, errorx.CodeInternal, "pick number failed",
+		return nil, errorx.Log(errorx.Error, errorx.CodeInternal,
+			"pick number failed",
 			logx.Field("err", err))
 	}
 
 	//转链
 	shortUrl, err := l.convertUrl(id)
 	if err != nil {
-		return nil, errorx.Log(errorx.Error, errorx.CodeInternal, "convert long links into short link failed",
+		return nil, errorx.Log(errorx.Error, errorx.CodeInternal,
+			"convert long links into short link failed",
 			logx.Field("long URL", req.LongUrl),
 			logx.Field("err", err))
 	}
@@ -82,7 +93,8 @@ func (l *ConvertLogic) Convert(req *types.ConvertRequest) (resp *types.ConvertRe
 		ShortUrl: shortUrl,
 	})
 	if err != nil {
-		return nil, errorx.Log(errorx.Error, errorx.CodeInternal, "insert url map failed",
+		return nil, errorx.Log(errorx.Error, errorx.CodeInternal,
+			"insert url map failed",
 			logx.Field("long URL", req.LongUrl),
 			logx.Field("err", err))
 	}
@@ -94,16 +106,36 @@ func (l *ConvertLogic) Convert(req *types.ConvertRequest) (resp *types.ConvertRe
 }
 
 // 检验 Url的合理性
-func (l *ConvertLogic) checkUrlValid(url string) bool {
+func (l *ConvertLogic) checkUrlValid(URL string) (bool, error) {
 	//检查是否可通
 	client := connect.NewClient()
-	if !connect.Check(client, url) {
-		return false
+	ok, err := connect.Check(client, URL)
+	if err != nil {
+		return false, fmt.Errorf("check connect failed,err:%w", err)
 	}
 
-	//检查是否为短链接
+	if !ok {
+		return false, nil
+	}
 
-	return true
+	//检查是否已经是短链接
+	//获取链接路径
+	basePath, err := urlTool.GetBasePath(URL)
+	if err != nil {
+		return false, fmt.Errorf("get url base path failed,err:%w", err)
+	}
+
+	//查询数据库
+	data, err := l.svcCtx.ShortUrlMapModel.FindOneByShortUrl(l.ctx, basePath)
+	if err != nil && !errors.Is(err, sqlx.ErrNotFound) {
+		return false, fmt.Errorf("FindOneByShortUrl failed,err:%w", err)
+	}
+
+	if errors.Is(err, sqlx.ErrNotFound) || data == nil {
+		return true, nil
+	}
+
+	return false, nil
 }
 
 // 将长链接转换为MD5

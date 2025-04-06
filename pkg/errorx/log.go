@@ -17,6 +17,8 @@ func Log(level logLevel, code Code, msg string, fields ...logx.LogField) error {
 		logx.Errorw(msg, fields...)
 	case Info:
 		logx.Infow(msg, fields...)
+	default:
+		logx.Errorw("invalid error code")
 	}
 	return New(code, msg)
 }
