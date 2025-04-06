@@ -13,6 +13,7 @@ import (
 	"shortener/pkg/connect"
 	"shortener/pkg/errorx"
 	"shortener/pkg/md5"
+	"shortener/pkg/sensitive"
 	"shortener/pkg/urlTool"
 )
 
@@ -69,16 +70,13 @@ func (l *ConvertLogic) Convert(req *types.ConvertRequest) (resp *types.ConvertRe
 		return &types.ConvertResponse{ShortUrl: data.ShortUrl}, nil
 	}
 
-	//取号
-	id, err := l.getSequenceID()
+	//转链
+	shortUrl, err := l.generateNonSensitiveShortUrl()
 	if err != nil {
 		return nil, errorx.Log(errorx.ErrorLevel, errorx.CodeInternal,
-			"get ID failed",
+			"convertLogic.generateNonSensitiveShortUrl failed",
 			logx.Field("err", err))
 	}
-
-	//转链
-	shortUrl := l.convertSequenceIDIntoShortUrl(id)
 
 	//存储映射
 	err = l.storeInRepository(m, req.LongUrl, shortUrl)
@@ -141,15 +139,37 @@ func (l *ConvertLogic) findShortUrlByMD5(m string) (*model.ShortUrlMap, error) {
 	return data, err
 }
 
-// 取号
-func (l *ConvertLogic) getSequenceID() (uint64, error) {
-	return l.svcCtx.SequenceRepository.Next(l.ctx)
-}
+// 转化为短链
+func (l *ConvertLogic) generateNonSensitiveShortUrl() (string, error) {
+	batchSize := 3   // 每次生成多个候选链接
+	maxAttempts := 2 // 最多尝试几批
 
-// 转链
-func (l *ConvertLogic) convertSequenceIDIntoShortUrl(id uint64) string {
-	return base62.Convert(id)
-	//todo 避免敏感词
+	for i := 0; i < maxAttempts; i++ {
+		candidates := make([]struct {
+			id  uint64
+			url string
+		}, batchSize)
+
+		// 批量生成候选短链接
+		for j := 0; j < batchSize; j++ {
+			id, err := l.svcCtx.SequenceRepository.NextID(l.ctx)
+			if err != nil {
+				return "", fmt.Errorf("get SequenceRepository.NextID failed: %w", err)
+			}
+			candidates[j].id = id
+			candidates[j].url = base62.Convert(id)
+		}
+
+		// 检查候选链接
+		for _, c := range candidates {
+			if !sensitive.Exist(l.svcCtx.Config.SensitiveWords, c.url) {
+				return c.url, nil
+			}
+			logx.Infof("skipping ID %d, generated short link contains sensitive words: %s", c.id, c.url)
+		}
+	}
+
+	return "", fmt.Errorf("unable to generate appropriate short link after %d batch attempts", maxAttempts)
 }
 
 // 数据持久化

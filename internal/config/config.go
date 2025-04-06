@@ -24,7 +24,8 @@ type Config struct {
 }
 
 type AppConf struct {
-	Operator string
+	Operator       string
+	SensitiveWords []string
 }
 
 type MysqlConf struct {

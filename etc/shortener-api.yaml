@@ -3,8 +3,8 @@ Mode: ${APP_ENV}
 Host: 0.0.0.0
 Port: ${APP_PORT}
 
-AppConfig:
-  Operator: ${OPERATOR}
+Operator: ${OPERATOR}
+SensitiveWords: [ "xxx", "sex", "ass", "fuck", "evil" ]
 
 CacheRedis:
   - Host: ${REDIS_HOST}:${REDIS_PORT}

@@ -8,7 +8,7 @@ import (
 )
 
 type Sequence interface {
-	Next(ctx context.Context) (uint64, error)
+	NextID(ctx context.Context) (uint64, error)
 }
 
 func NewSequence(dsn string) Sequence {
@@ -23,28 +23,28 @@ type sequence struct {
 
 const replaceIntoStub = `REPLACE INTO sequence (stub) VALUES ('a')`
 
-func (s sequence) Next(ctx context.Context) (uint64, error) {
+func (s sequence) NextID(ctx context.Context) (uint64, error) {
 	//预处理
 	stmt, err := s.conn.PrepareCtx(ctx, replaceIntoStub)
 	if err != nil {
-		return 0, fmt.Errorf("sequence.Next() conn.PrepareCtx failed,err:%w", err)
+		return 0, fmt.Errorf("sequence.NextID() conn.PrepareCtx failed,err:%w", err)
 	}
 	defer func() {
 		if err = stmt.Close(); err != nil {
-			logx.Errorw("sequence.Next() conn.PrepareCtx.stmt close failed", logx.Field("err", err))
+			logx.Errorw("sequence.NextID() conn.PrepareCtx.stmt close failed", logx.Field("err", err))
 		}
 	}()
 
 	//执行
 	result, err := stmt.ExecCtx(ctx)
 	if err != nil {
-		return 0, fmt.Errorf("sequence Next() stmt.ExecCtx failed,err:%w", err)
+		return 0, fmt.Errorf("sequence NextID() stmt.ExecCtx failed,err:%w", err)
 	}
 
 	//获取结果
 	lastID, err := result.LastInsertId()
 	if err != nil {
-		return 0, fmt.Errorf("sequence Next() get result.LastInsertId() failed,err:%w", err)
+		return 0, fmt.Errorf("sequence NextID() get result.LastInsertId() failed,err:%w", err)
 	}
 
 	return uint64(lastID), nil
