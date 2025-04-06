@@ -1,6 +1,7 @@
 package urlTool
 
 import (
+	"errors"
 	"fmt"
 	"net/url"
 	"path"
@@ -13,6 +14,10 @@ func GetBasePath(URL string) (string, error) {
 	myUrl, err := url.Parse(URL)
 	if err != nil {
 		return "", fmt.Errorf("parse url failed,err:%w", err)
+	}
+
+	if len(myUrl.Host) == 0 {
+		return "", errors.New("no host in target url")
 	}
 
 	basePath := path.Base(myUrl.Path)
