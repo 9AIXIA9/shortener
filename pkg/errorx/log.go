@@ -24,7 +24,7 @@ func Log(level logLevel, code Code, msg string, fields ...logx.LogField) error {
 		//避免直接暴露系统错误
 		return New(code, internalErrorMsg)
 	case DebugLevel:
-		logx.Infow(msg, fields...)
+		logx.Debugw(msg, fields...)
 		//给出信息debug
 		return New(code, msg)
 	default:
