@@ -1,10 +1,13 @@
-# --- 日志文件 ---
+# ----- 语言无关通用规则 ----- #
+# 日志文件
 *.log
+# 滚动日志文件
+*.log.*
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# --- 编译生成文件 ---
+# 编译产物
 *.exe
 *.dll
 *.so
@@ -15,44 +18,29 @@ dist/
 build/
 *.app
 *.out
+# Go 二进制输出目录
+/bin/
 
-# --- 依赖目录 ---
+# 依赖目录
 node_modules/
-vendor/
 jspm_packages/
+# Go 模块 vendor 目录
+vendor/
 
-# --- IDE 配置文件 ---
-.idea/
-*.iml
-.vscode/
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
-
-# --- 系统文件 ---
-.DS_Store
-Thumbs.db
-Desktop.ini
-*.lnk
-
-# --- 环境文件 ---
-.env*
-*.env
-
-# --- 测试相关 ---
-coverage/
-.nyc_output/
-*.lcov
-
-# --- 临时文件 ---
+# 临时文件
 *.tmp
 *.bak
 *.swp
 *.swo
 
-# --- 包管理文件 ---
+# 系统文件
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+*.lnk
+
+# 压缩包
 *.7z
 *.dmg
 *.gz
@@ -62,15 +50,60 @@ coverage/
 *.tar
 *.zip
 
-# --- 文档生成 ---
+
+# ----- Go 语言专属规则 ----- #
+# 可执行文件
+# 项目根目录生成的可执行文件
+/shortender
+
+# 测试相关
+# Go 测试二进制文件
+*.test
+# 性能分析文件
+*.prof
+ # 跟踪文件
+*.trace
+ # 测试覆盖率报告
+coverage/
+.nyc_output/
+*.lcov
+
+# 开发配置
+ # Go workspace 文件
+go.work
+
+
+# ----- 环境配置 ----- #
+.env*
+*.env
+
+
+# ----- IDE 配置 ----- #
+.idea/
+*.iml
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+
+# ----- 数据库相关 ----- #
+*.db
+*.sqlite
+# 数据库种子文件
+*.seed
+
+
+# ----- 项目特定规则 ----- #
+# 本地开发配置覆盖
+/etc/shortener-api.local.yaml
+
+# 自动生成代码（如果不需要提交）
+# internal/model/*_gen.go
+
+
+# ----- 文档生成 ----- #
 _site/
 .sass-cache/
-
-# --- 操作系统目录 ---
-ehthumbs.db
-[Tt]humbs.db
-
-# --- 其他 ---
-*.log.*       # 滚动日志文件
-*.seed        # 数据库种子文件
-*.sqlite      # 本地数据库文件
