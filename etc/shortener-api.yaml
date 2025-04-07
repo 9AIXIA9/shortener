@@ -4,6 +4,7 @@ Host: 0.0.0.0
 Port: ${APP_PORT}
 
 Operator: ${OPERATOR}
+Domain: ${DOMAIN}
 SensitiveWords: [ "xxx", "sex", "ass", "fuck", "evil" ]
 
 CacheRedis:

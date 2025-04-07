@@ -6,8 +6,8 @@ package handler
 import (
 	"net/http"
 
-	shortener "shortener/internal/handler/shortener"
-	"shortener/internal/svc"
+	shortener "github.com/AIXIA/shortener/internal/handler/shortener"
+	"github.com/AIXIA/shortener/internal/svc"
 
 	"github.com/zeromicro/go-zero/rest"
 )

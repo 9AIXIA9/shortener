@@ -4,17 +4,17 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/AIXIA/shortener/internal/model"
+	"github.com/AIXIA/shortener/internal/svc"
+	"github.com/AIXIA/shortener/internal/types"
+	"github.com/AIXIA/shortener/pkg/base62"
+	"github.com/AIXIA/shortener/pkg/connect"
+	"github.com/AIXIA/shortener/pkg/errorx"
+	"github.com/AIXIA/shortener/pkg/md5"
+	"github.com/AIXIA/shortener/pkg/sensitive"
+	"github.com/AIXIA/shortener/pkg/urlTool"
 	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
-	"shortener/internal/model"
-	"shortener/internal/svc"
-	"shortener/internal/types"
-	"shortener/pkg/base62"
-	"shortener/pkg/connect"
-	"shortener/pkg/errorx"
-	"shortener/pkg/md5"
-	"shortener/pkg/sensitive"
-	"shortener/pkg/urlTool"
 )
 
 type ConvertLogic struct {
@@ -67,7 +67,8 @@ func (l *ConvertLogic) Convert(req *types.ConvertRequest) (resp *types.ConvertRe
 	}
 
 	if data != nil && len(data.ShortUrl) != 0 {
-		return &types.ConvertResponse{ShortUrl: data.ShortUrl}, nil
+		shortUrl := l.svcCtx.Config.Domain + "/" + data.ShortUrl
+		return &types.ConvertResponse{ShortUrl: shortUrl}, nil
 	}
 
 	//转链
@@ -88,6 +89,8 @@ func (l *ConvertLogic) Convert(req *types.ConvertRequest) (resp *types.ConvertRe
 	}
 
 	//返回响应
+	shortUrl = l.svcCtx.Config.Domain + "/" + shortUrl
+
 	return &types.ConvertResponse{
 		ShortUrl: shortUrl,
 	}, nil
@@ -141,32 +144,20 @@ func (l *ConvertLogic) findShortUrlByMD5(m string) (*model.ShortUrlMap, error) {
 
 // 转化为短链
 func (l *ConvertLogic) generateNonSensitiveShortUrl() (string, error) {
-	batchSize := 3   // 每次生成多个候选链接
-	maxAttempts := 2 // 最多尝试几批
+	maxAttempts := 5
 
 	for i := 0; i < maxAttempts; i++ {
-		candidates := make([]struct {
-			id  uint64
-			url string
-		}, batchSize)
-
-		// 批量生成候选短链接
-		for j := 0; j < batchSize; j++ {
-			id, err := l.svcCtx.SequenceRepository.NextID(l.ctx)
-			if err != nil {
-				return "", fmt.Errorf("get SequenceRepository.NextID failed: %w", err)
-			}
-			candidates[j].id = id
-			candidates[j].url = base62.Convert(id)
+		id, err := l.svcCtx.SequenceRepository.NextID(l.ctx)
+		if err != nil {
+			return "", fmt.Errorf("get SequenceRepository.NextID failed: %w", err)
 		}
+		url := base62.Convert(id)
 
 		// 检查候选链接
-		for _, c := range candidates {
-			if !sensitive.Exist(l.svcCtx.Config.SensitiveWords, c.url) {
-				return c.url, nil
-			}
-			logx.Infof("skipping ID %d, generated short link contains sensitive words: %s", c.id, c.url)
+		if !sensitive.Exist(l.svcCtx.Config.SensitiveWords, url) {
+			return url, nil
 		}
+		logx.Infof("skipping ID %d, generated short link contains sensitive words: %s", id, url)
 	}
 
 	return "", fmt.Errorf("unable to generate appropriate short link after %d batch attempts", maxAttempts)

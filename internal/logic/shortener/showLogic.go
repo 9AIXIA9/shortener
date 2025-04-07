@@ -3,8 +3,8 @@ package shortener
 import (
 	"context"
 
-	"shortener/internal/svc"
-	"shortener/internal/types"
+	"github.com/AIXIA/shortener/internal/svc"
+	"github.com/AIXIA/shortener/internal/types"
 
 	"github.com/zeromicro/go-zero/core/logx"
 )

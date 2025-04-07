@@ -3,10 +3,10 @@ package shortener
 import (
 	"net/http"
 
+	"github.com/AIXIA/shortener/internal/logic/shortener"
+	"github.com/AIXIA/shortener/internal/svc"
+	"github.com/AIXIA/shortener/internal/types"
 	"github.com/zeromicro/go-zero/rest/httpx"
-	"shortener/internal/logic/shortener"
-	"shortener/internal/svc"
-	"shortener/internal/types"
 )
 
 func ShowHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {

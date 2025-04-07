@@ -26,6 +26,7 @@ type Config struct {
 type AppConf struct {
 	Operator       string
 	SensitiveWords []string
+	Domain         string
 }
 
 type MysqlConf struct {

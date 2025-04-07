@@ -1,8 +1,8 @@
 package svc
 
 import (
-	"shortener/internal/config"
-	"shortener/internal/repository"
+	"github.com/AIXIA/shortener/internal/config"
+	"github.com/AIXIA/shortener/internal/repository"
 )
 
 type ServiceContext struct {

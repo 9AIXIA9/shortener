@@ -1,15 +1,15 @@
 package shortener
 
 import (
+	"github.com/AIXIA/shortener/pkg/connect"
+	"github.com/AIXIA/shortener/pkg/validate"
 	"github.com/zeromicro/go-zero/core/logx"
 	"net/http"
-	"shortener/pkg/connect"
-	"shortener/pkg/validate"
 
+	"github.com/AIXIA/shortener/internal/logic/shortener"
+	"github.com/AIXIA/shortener/internal/svc"
+	"github.com/AIXIA/shortener/internal/types"
 	"github.com/zeromicro/go-zero/rest/httpx"
-	"shortener/internal/logic/shortener"
-	"shortener/internal/svc"
-	"shortener/internal/types"
 )
 
 func ConvertHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
