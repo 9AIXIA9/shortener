@@ -1,33 +1,33 @@
-package shortener
+package logic
 
 import (
 	"context"
 	"errors"
 	"testing"
 
-	"github.com/AIXIA/shortener/internal/config"
-	"github.com/AIXIA/shortener/internal/model"
-	mockRepository "github.com/AIXIA/shortener/internal/repository/mock"
-	"github.com/AIXIA/shortener/internal/svc"
-	"github.com/AIXIA/shortener/internal/types"
-	mockConnect "github.com/AIXIA/shortener/pkg/connect/mock"
+	"shortener/internal/config"
+	"shortener/internal/model"
+	mockRepository "shortener/internal/repository/mock"
+	"shortener/internal/svc"
+	"shortener/internal/types"
+	mockConnect "shortener/pkg/connect/mock"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
 
-func TestConvertLogic_Convert(t *testing.T) {
+func TestShortenLogic_Shorten(t *testing.T) {
 	testCases := []struct {
 		name         string
-		req          *types.ConvertRequest
+		req          *types.ShortenRequest
 		mockSetup    func(mockCtrl *gomock.Controller) (*mockConnect.MockClient, *mockRepository.MockShortUrlMap, *mockRepository.MockSequence)
-		expectedResp *types.ConvertResponse
+		expectedResp *types.ShortenResponse
 		expectedErr  bool
 	}{
 		{
 			name: "成功-创建新短URL",
-			req: &types.ConvertRequest{
+			req: &types.ShortenRequest{
 				LongUrl: "https://example.com/long/path",
 			},
 			mockSetup: func(mockCtrl *gomock.Controller) (*mockConnect.MockClient, *mockRepository.MockShortUrlMap, *mockRepository.MockSequence) {
@@ -52,14 +52,14 @@ func TestConvertLogic_Convert(t *testing.T) {
 
 				return mockClient, mockShortUrlMap, mockSequence
 			},
-			expectedResp: &types.ConvertResponse{
+			expectedResp: &types.ShortenResponse{
 				ShortUrl: "https://short.com/w7e",
 			},
 			expectedErr: false,
 		},
 		{
 			name: "URL已存在",
-			req: &types.ConvertRequest{
+			req: &types.ShortenRequest{
 				LongUrl: "https://example.com/exists",
 			},
 			mockSetup: func(mockCtrl *gomock.Controller) (*mockConnect.MockClient, *mockRepository.MockShortUrlMap, *mockRepository.MockSequence) {
@@ -80,14 +80,14 @@ func TestConvertLogic_Convert(t *testing.T) {
 
 				return mockClient, mockShortUrlMap, mockSequence
 			},
-			expectedResp: &types.ConvertResponse{
+			expectedResp: &types.ShortenResponse{
 				ShortUrl: "https://short.com/existingShort",
 			},
 			expectedErr: false,
 		},
 		{
 			name: "URL无效",
-			req: &types.ConvertRequest{
+			req: &types.ShortenRequest{
 				LongUrl: "https://invalid-url.com",
 			},
 			mockSetup: func(mockCtrl *gomock.Controller) (*mockConnect.MockClient, *mockRepository.MockShortUrlMap, *mockRepository.MockSequence) {
@@ -104,7 +104,7 @@ func TestConvertLogic_Convert(t *testing.T) {
 		},
 		{
 			name: "URL检查错误",
-			req: &types.ConvertRequest{
+			req: &types.ShortenRequest{
 				LongUrl: "https://example.com/error",
 			},
 			mockSetup: func(mockCtrl *gomock.Controller) (*mockConnect.MockClient, *mockRepository.MockShortUrlMap, *mockRepository.MockSequence) {
@@ -121,7 +121,7 @@ func TestConvertLogic_Convert(t *testing.T) {
 		},
 		{
 			name: "数据库MD5查询错误",
-			req: &types.ConvertRequest{
+			req: &types.ShortenRequest{
 				LongUrl: "https://example.com/db-error",
 			},
 			mockSetup: func(mockCtrl *gomock.Controller) (*mockConnect.MockClient, *mockRepository.MockShortUrlMap, *mockRepository.MockSequence) {
@@ -144,7 +144,7 @@ func TestConvertLogic_Convert(t *testing.T) {
 		},
 		{
 			name: "序列生成错误",
-			req: &types.ConvertRequest{
+			req: &types.ShortenRequest{
 				LongUrl: "https://example.com/seq-error",
 			},
 			mockSetup: func(mockCtrl *gomock.Controller) (*mockConnect.MockClient, *mockRepository.MockShortUrlMap, *mockRepository.MockSequence) {
@@ -170,7 +170,7 @@ func TestConvertLogic_Convert(t *testing.T) {
 		},
 		{
 			name: "数据插入错误",
-			req: &types.ConvertRequest{
+			req: &types.ShortenRequest{
 				LongUrl: "https://example.com/insert-error",
 			},
 			mockSetup: func(mockCtrl *gomock.Controller) (*mockConnect.MockClient, *mockRepository.MockShortUrlMap, *mockRepository.MockSequence) {
@@ -222,10 +222,10 @@ func TestConvertLogic_Convert(t *testing.T) {
 			}
 
 			// 创建测试对象
-			logic := NewConvertLogic(context.Background(), svcCtx, mockClient)
+			logic := NewShortenLogic(context.Background(), svcCtx, mockClient)
 
 			// 执行测试
-			resp, err := logic.Convert(tc.req)
+			resp, err := logic.Shorten(tc.req)
 
 			// 验证结果
 			if tc.expectedErr {

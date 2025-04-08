@@ -3,9 +3,9 @@ package repository
 
 import (
 	"context"
-	"github.com/AIXIA/shortener/internal/model"
 	"github.com/zeromicro/go-zero/core/stores/cache"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
+	"shortener/internal/model"
 )
 
 type ShortUrlMap interface {

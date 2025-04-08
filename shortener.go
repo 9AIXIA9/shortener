@@ -3,9 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/AIXIA/shortener/internal/config"
-	"github.com/AIXIA/shortener/internal/handler"
-	"github.com/AIXIA/shortener/internal/svc"
+	"shortener/internal/config"
+	"shortener/internal/handler"
+	"shortener/internal/svc"
 
 	"github.com/zeromicro/go-zero/core/conf"
 	"github.com/zeromicro/go-zero/rest"

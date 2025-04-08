@@ -17,18 +17,18 @@ const (
 )
 
 // Log 记录错误日志并返回错误
-func Log(level logLevel, code Code, msg string, fields ...logx.LogField) error {
+func Log(level logLevel, msg string, fields ...logx.LogField) error {
 	switch level {
 	case ErrorLevel:
 		logx.Errorw(msg, fields...)
 		//避免直接暴露系统错误
-		return New(code, internalErrorMsg)
+		return New(CodeInternal, internalErrorMsg)
 	case DebugLevel:
 		logx.Debugw(msg, fields...)
 		//给出信息debug
-		return New(code, msg)
+		return New(CodeLogic, msg)
 	default:
 		logx.Errorw("invalid error code")
-		return New(code, internalErrorMsg)
+		return New(CodeInternal, internalErrorMsg)
 	}
 }

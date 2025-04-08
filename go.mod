@@ -1,4 +1,4 @@
-module github.com/AIXIA/shortener
+module shortener
 
 go 1.24.1
 

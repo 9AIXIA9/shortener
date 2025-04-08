@@ -1,25 +1,24 @@
 syntax = "v1"
 
 info (
-	title:   "short url"
-	desc:    "Convert short url to long url"
+	title:   "Short URL Service"
+	desc:    "High-performance URL shortening service"
 	author:  "AIXIA"
-	email:   "906094554@qq.com"
-	version: "v1.0"
+	version: "v1.1"
 )
 
 //将长链接转化为短链接
-type ConvertRequest {
-	LongUrl string `json:"long_url" validate:"required,url,max=2000"`
+type ShortenRequest {
+	LongUrl string `json:"long_url" validate:"required,max=2048,validLongUrl"`
 }
 
-type ConvertResponse {
+type ShortenResponse {
 	ShortUrl string `json:"short_url"`
 }
 
 //将短链接转化为长链接
 type ShowRequest {
-	ShortUrl string `json:"short_url" validate:"required,alphanumdash,min=4,max=20""`
+	ShortUrl string `path:"short_url" validate:"required,validShortUrl"`
 }
 
 type ShowResponse {
@@ -27,15 +26,23 @@ type ShowResponse {
 }
 
 @server (
-	prefix: api
+	prefix: /v1/shorturl
 	jwt:    Auth
-	group:  shortener
+	limit:  100 //限流中间件
 )
 service Shortener-api {
-	@handler ConvertHandler
-	post /convert (ConvertRequest) returns (ConvertResponse)
+	//转长链接为短链接
+	@handler ShortenHandler
+	post /shorten (ShortenRequest) returns (ShortenResponse)
+}
 
+@server (
+	prefix: /v1/shorturl
+	limit:  100 //限流中间件
+)
+service Shortener-api {
+	//通过短链接访问长链接
 	@handler ShowHandler
-	post /show (ShowRequest) returns (ShowResponse)
+	get /:short_url (ShowRequest) returns (ShowResponse)
 }
 
