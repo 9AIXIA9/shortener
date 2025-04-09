@@ -7,9 +7,16 @@ Operator: ${OPERATOR}
 Domain: ${DOMAIN}
 SensitiveWords: [ "xxx", "sex", "ass", "fuck", "evil" ]
 
+BloomFilterConf:
+  RedisHost: ${BLOOM_REDIS_HOST}:${BLOOM_REDIS_PORT}
+  RedisPassword: ${BLOOM_REDIS_PASSWORD}
+  RedisType: ${BLOOM_REDIS_TYPE}
+  Key: ${BLOOM_KEY}
+  Bits: ${BLOOM_BITS}
+
 CacheRedis:
-  - Host: ${REDIS_HOST}:${REDIS_PORT}
-    Pass: ${REDIS_PASSWORD}
+  - Host: ${CACHE_REDIS_HOST}:${CACHE_REDIS_PORT}
+    Pass: ${CACHE_REDIS_PASSWORD}
     Type: node
 
 Auth:

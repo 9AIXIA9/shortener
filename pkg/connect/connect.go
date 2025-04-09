@@ -1,4 +1,4 @@
-//go:generate mockgen -source=$GOFILE -destination=./mock/client_mock.go -package=connect
+//go:generate mockgen -source=$GOFILE -destination=./mock/connect_mock.go -package=connect
 package connect
 
 import (

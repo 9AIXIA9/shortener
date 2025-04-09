@@ -83,8 +83,18 @@ func (l *ShortenLogic) Shorten(req *types.ShortenRequest) (resp *types.ShortenRe
 	err = l.storeInRepository(m, req.LongUrl, shortUrl)
 	if err != nil {
 		return nil, errorx.Log(errorx.ErrorLevel,
-			"insert url map failed",
+			"convertLogic.storeInRepository failed",
 			logx.Field("long URL", req.LongUrl),
+			logx.Field("err", err))
+	}
+
+	//存储过滤
+	err = l.storeShortUrlInFilter(shortUrl)
+	if err != nil {
+		return nil, errorx.Log(errorx.ErrorLevel,
+			"convertLogic.storeShortUrlInFilter failed",
+			logx.Field("long URL", req.LongUrl),
+			logx.Field("short URL", shortUrl),
 			logx.Field("err", err))
 	}
 
@@ -108,6 +118,7 @@ func (l *ShortenLogic) checkLongUrlValid(URL string) (bool, error) {
 		return false, nil
 	}
 
+	//todo 这里有点不清晰
 	//检查是否已经是短链接
 	//获取链接路径
 	basePath, err := urlTool.GetBasePath(URL)
@@ -165,11 +176,26 @@ func (l *ShortenLogic) generateNonSensitiveShortUrl() (string, error) {
 
 // 数据持久化
 func (l *ShortenLogic) storeInRepository(md5 string, longUrl, shortUrl string) error {
-	return l.svcCtx.ShortUrlMapRepository.Insert(l.ctx, &model.ShortUrlMap{
+	//存储到仓库中
+	err := l.svcCtx.ShortUrlMapRepository.Insert(l.ctx, &model.ShortUrlMap{
 		CreateBy: l.svcCtx.Config.Operator,
 		IsDel:    0,
 		LongUrl:  longUrl,
 		Md5:      md5,
 		ShortUrl: shortUrl,
 	})
+
+	if err != nil {
+		return fmt.Errorf("svcCtx.ShortUrlMapRepository.Insert failed,err:%w", err)
+	}
+	return nil
+}
+
+// 添加到过滤器中
+func (l *ShortenLogic) storeShortUrlInFilter(shortUrl string) error {
+	err := l.svcCtx.Filter.AddCtx(l.ctx, []byte(shortUrl))
+	if err != nil {
+		return fmt.Errorf("svcCtx.Filter.AddCtx failed,err:%w", err)
+	}
+	return nil
 }

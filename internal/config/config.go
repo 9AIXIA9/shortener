@@ -17,6 +17,8 @@ type Config struct {
 
 	CacheRedis cache.CacheConf
 
+	BloomFilterConf BloomFilterConf
+
 	Auth struct {
 		AccessSecret string
 		AccessExpire int64
@@ -35,6 +37,14 @@ type MysqlConf struct {
 	Host     string
 	Port     int
 	DBName   string
+}
+
+type BloomFilterConf struct {
+	RedisHost     string
+	RedisPassword string
+	RedisType     string
+	Key           string
+	Bits          uint
 }
 
 func (db MysqlConf) DSN() string {
