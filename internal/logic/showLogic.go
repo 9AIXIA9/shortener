@@ -2,13 +2,9 @@ package logic
 
 import (
 	"context"
-	"errors"
-	"fmt"
-	"github.com/zeromicro/go-zero/core/stores/sqlx"
-	"shortener/pkg/errorx"
-
 	"shortener/internal/svc"
 	"shortener/internal/types"
+	"shortener/pkg/errorx"
 
 	"github.com/zeromicro/go-zero/core/logx"
 )
@@ -27,43 +23,30 @@ func NewShowLogic(ctx context.Context, svcCtx *svc.ServiceContext) *ShowLogic {
 	}
 }
 
-func (l *ShowLogic) Show(req *types.ShowRequest) (resp *types.ShowResponse, err error) {
+func (l *ShowLogic) Show(req *types.ShowRequest) (*types.ShowResponse, error) {
 	//校验参数（handler进行初步处理）
 
 	//进行过滤
 	exist, err := l.filter(req.ShortUrl)
 	if err != nil {
-		return nil, errorx.Log(errorx.ErrorLevel,
-			"showLogic filter failed",
-			logx.Field("shortUrl", req.ShortUrl),
-			logx.Field("err", err))
+		return nil, err
 	}
 
 	if !exist {
-		logx.Debug("the bloom filter think:this url doesn't exist")
-		return nil, errorx.Log(errorx.DebugLevel,
-			"the requested web page does not exist",
-			logx.Field("shortUrl", req.ShortUrl))
+		return nil, errorx.New(errorx.CodeNotFound, "the short link does not exist")
 	}
-
-	logx.Debug("the bloom filter think:this url exists")
 
 	//查询长链
 	longUrl, err := l.queryLongUrlByShortUrl(req.ShortUrl)
 	if err != nil {
-		return nil, errorx.Log(errorx.ErrorLevel,
-			"showLogic queryLongUrlByShortUrl failed",
-			logx.Field("shortUrl", req.ShortUrl),
-			logx.Field("err", err))
+		return nil, err
 	}
 
 	if len(longUrl) == 0 {
-		return nil, errorx.Log(errorx.DebugLevel,
-			"the requested web page does not exist",
-			logx.Field("shortUrl", req.ShortUrl))
+		return nil, errorx.New(errorx.CodeNotFound, "the short link does not exist")
 	}
 
-	//返回长链接
+	// 如果数据库中存在，则返回长链接
 	return &types.ShowResponse{LongUrl: longUrl}, nil
 }
 
@@ -71,7 +54,7 @@ func (l *ShowLogic) Show(req *types.ShowRequest) (resp *types.ShowResponse, err 
 func (l *ShowLogic) filter(shortUrl string) (bool, error) {
 	exist, err := l.svcCtx.Filter.ExistsCtx(l.ctx, []byte(shortUrl))
 	if err != nil {
-		return false, fmt.Errorf("svcCtx.Filter.ExistsCtx failed,err:%w", err)
+		return false, errorx.Wrap(err, errorx.CodeSystemError, "fail to check if there is a shortURL through the filter")
 	}
 
 	return exist, nil
@@ -80,10 +63,18 @@ func (l *ShowLogic) filter(shortUrl string) (bool, error) {
 // 查询原始长链接
 func (l *ShowLogic) queryLongUrlByShortUrl(shortUrl string) (string, error) {
 	data, err := l.svcCtx.ShortUrlMapRepository.FindOneByShortUrl(l.ctx, shortUrl)
-	if err != nil && !errors.Is(err, sqlx.ErrNotFound) {
-		return "", fmt.Errorf("FindOneByShortUrl failed,err:%w", err)
+	if err != nil {
+		// 对特定错误类型做特殊处理
+		if errorx.Is(err, errorx.CodeNotFound) {
+			return "", nil
+		}
+		// 其他错误统一包装
+		return "", errorx.Wrap(err, errorx.CodeSystemError, "query short link mapping failed").
+			WithContext(l.ctx).
+			WithMeta("shortUrl", shortUrl)
 	}
-	if errors.Is(err, sqlx.ErrNotFound) || data == nil || len(data.LongUrl) == 0 {
+
+	if data == nil {
 		return "", nil
 	}
 	return data.LongUrl, nil

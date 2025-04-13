@@ -29,7 +29,7 @@ func ShowHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		l := logic.NewShowLogic(r.Context(), svcCtx)
 		resp, err := l.Show(&req)
 		if err != nil {
-			httpx.ErrorCtx(r.Context(), w, err)
+			httpx.ErrorCtx(r.Context(), w, LogError(err))
 		} else {
 			//httpx.OkJsonCtx(r.Context(), w, resp)
 			http.Redirect(w, r, resp.LongUrl, http.StatusFound)

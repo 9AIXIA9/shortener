@@ -7,7 +7,7 @@ import (
 	"shortener/internal/logic"
 	"shortener/internal/svc"
 	"shortener/internal/types"
-	"shortener/pkg/connect"
+	"shortener/pkg/urlTool"
 	"shortener/pkg/validate"
 )
 
@@ -26,10 +26,10 @@ func ShortenHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 			return
 		}
 
-		l := logic.NewShortenLogic(r.Context(), svcCtx, connect.NewClient())
+		l := logic.NewShortenLogic(r.Context(), svcCtx, urlTool.NewClient())
 		resp, err := l.Shorten(&req)
 		if err != nil {
-			httpx.ErrorCtx(r.Context(), w, err)
+			httpx.ErrorCtx(r.Context(), w, LogError(err))
 		} else {
 			httpx.OkJsonCtx(r.Context(), w, resp)
 		}

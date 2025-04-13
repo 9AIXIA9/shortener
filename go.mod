@@ -5,6 +5,7 @@ go 1.24.1
 require (
 	github.com/go-playground/validator/v10 v10.26.0
 	github.com/joho/godotenv v1.5.1
+	github.com/prometheus/client_golang v1.21.1
 	github.com/stretchr/testify v1.10.0
 	github.com/zeromicro/go-zero v1.8.2
 	go.uber.org/mock v0.5.1
@@ -35,7 +36,6 @@ require (
 	github.com/openzipkin/zipkin-go v0.4.3 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.2 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/prometheus/client_golang v1.21.1 // indirect
 	github.com/prometheus/client_model v0.6.1 // indirect
 	github.com/prometheus/common v0.62.0 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
