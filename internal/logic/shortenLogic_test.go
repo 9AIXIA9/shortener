@@ -29,7 +29,7 @@ func TestShortenLogic_Shorten(t *testing.T) {
 
 	// 创建配置
 	cfg := config.Config{
-		AppConf: config.AppConf{
+		App: config.AppConf{
 			Operator:       "test_operator",
 			SensitiveWords: []string{"bad"},
 			Domain:         "example.com",
@@ -59,7 +59,7 @@ func TestShortenLogic_Shorten(t *testing.T) {
 	// 测试场景二：已经是短链接
 	t.Run("already_short_url", func(t *testing.T) {
 		shortURL := "abc123"
-		url := "http://" + cfg.Domain + "/" + shortURL
+		url := "http://" + cfg.App.Domain + "/" + shortURL
 
 		// 设置URL检查返回有效
 		mockURLClient.EXPECT().Check(url).Return(true)
@@ -95,7 +95,7 @@ func TestShortenLogic_Shorten(t *testing.T) {
 
 		assert.Nil(t, err)
 		assert.NotNil(t, resp)
-		assert.Equal(t, svcCtx.Config.Domain+"/"+shortURL, resp.ShortUrl)
+		assert.Equal(t, svcCtx.Config.App.Domain+"/"+shortURL, resp.ShortUrl)
 	})
 
 	// 测试场景四：新的长链接，需要生成短链接
@@ -126,7 +126,7 @@ func TestShortenLogic_Shorten(t *testing.T) {
 	// 测试场景五：生成短链接时遇到敏感词
 	t.Run("sensitive_short_url", func(t *testing.T) {
 		sensitiveConfig := config.Config{
-			AppConf: config.AppConf{
+			App: config.AppConf{
 				Operator: "test_operator",
 				// 使用包含0-9,a-z,A-Z的敏感词，确保任何生成的短链接都会触发敏感检测
 				SensitiveWords: []string{"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b"},
@@ -196,7 +196,7 @@ func TestShortenLogic_isAlreadyShortUrl(t *testing.T) {
 	mockShortUrlMap := repositoryMock.NewMockShortUrlMap(ctrl)
 
 	cfg := config.Config{
-		AppConf: config.AppConf{
+		App: config.AppConf{
 			Domain: "example.com",
 		},
 	}
@@ -309,7 +309,7 @@ func TestShortenLogic_generateNonSensitiveShortUrl(t *testing.T) {
 
 	// 正确初始化配置
 	cfg := config.Config{
-		AppConf: config.AppConf{
+		App: config.AppConf{
 			SensitiveWords: []string{"bad", "evil"},
 		},
 	}
@@ -339,7 +339,7 @@ func TestShortenLogic_storeInRepository(t *testing.T) {
 	mockShortUrlMap := repositoryMock.NewMockShortUrlMap(ctrl)
 
 	cfg := config.Config{
-		AppConf: config.AppConf{
+		App: config.AppConf{
 			Domain:   "example.com",
 			Operator: "test_operator",
 		},

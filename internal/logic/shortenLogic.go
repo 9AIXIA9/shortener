@@ -73,10 +73,8 @@ func (l *ShortenLogic) Shorten(req *types.ShortenRequest) (*types.ShortenRespons
 		}
 
 		//返回响应
-		shortUrl = l.svcCtx.Config.Domain + "/" + shortUrl
-
 		return &types.ShortenResponse{
-			ShortUrl: shortUrl,
+			ShortUrl: l.getFullShortLink(shortUrl),
 		}, nil
 	}
 
@@ -85,15 +83,10 @@ func (l *ShortenLogic) Shorten(req *types.ShortenRequest) (*types.ShortenRespons
 	}
 
 	if len(shortUrl) != 0 {
-		shortUrl = l.svcCtx.Config.Domain + "/" + shortUrl
-		return &types.ShortenResponse{ShortUrl: shortUrl}, nil
+		return &types.ShortenResponse{ShortUrl: l.getFullShortLink(shortUrl)}, nil
 	}
 
-	shortUrl = l.svcCtx.Config.Domain + "/" + shortUrl
-
-	return &types.ShortenResponse{
-		ShortUrl: shortUrl,
-	}, nil
+	return nil, errorx.New(errorx.CodeDatabaseError, "shortUrl is empty")
 }
 
 func (l *ShortenLogic) isValidUrl(URL string) bool {
@@ -105,7 +98,7 @@ func (l *ShortenLogic) isAlreadyShortUrl(url string) (bool, error) {
 	domain, path := urlTool.GetUrlDomainAndPath(url)
 
 	// 检查是否是我们的短链域名
-	if domain == l.svcCtx.Config.Domain {
+	if domain == l.svcCtx.Config.App.Domain {
 		// 域名匹配，查询数据库验证短链接是否存在
 		if path != "" {
 			_, err := l.svcCtx.ShortUrlMapRepository.FindOneByShortUrl(l.ctx, path)
@@ -164,7 +157,7 @@ func (l *ShortenLogic) generateNonSensitiveShortUrl() (string, error) {
 		url := base62.Convert(id)
 
 		// 检查敏感词
-		if !sensitive.Exist(l.svcCtx.Config.SensitiveWords, url) {
+		if !sensitive.Exist(l.svcCtx.Config.App.SensitiveWords, url) {
 			return url, nil
 		}
 		logx.Infof("skipping ID %d, generated short link contains sensitive words: %s", id, url)
@@ -178,7 +171,7 @@ func (l *ShortenLogic) generateNonSensitiveShortUrl() (string, error) {
 func (l *ShortenLogic) storeInRepository(md5 string, longUrl, shortUrl string) error {
 	//存储到仓库中
 	err := l.svcCtx.ShortUrlMapRepository.Insert(l.ctx, &model.ShortUrlMap{
-		CreateBy: l.svcCtx.Config.Operator,
+		CreateBy: l.svcCtx.Config.App.Operator,
 		IsDel:    0,
 		LongUrl:  longUrl,
 		Md5:      md5,
@@ -198,4 +191,8 @@ func (l *ShortenLogic) storeShortUrlInFilter(shortUrl string) error {
 		return errorx.Wrap(err, errorx.CodeSystemError, "fail to store shortUrl in filter")
 	}
 	return nil
+}
+
+func (l *ShortenLogic) getFullShortLink(shortUrl string) string {
+	return l.svcCtx.Config.App.Domain + "/" + shortUrl
 }

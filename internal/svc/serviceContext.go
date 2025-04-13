@@ -16,10 +16,11 @@ type ServiceContext struct {
 }
 
 func NewServiceContext(c config.Config) *ServiceContext {
+	// 初始化布隆过滤器Redis连接
 	r, err := redis.NewRedis(redis.RedisConf{
-		Host: c.BloomFilterConf.RedisHost,
-		Type: c.BloomFilterConf.RedisType,
-		Pass: c.BloomFilterConf.RedisPassword,
+		Host: c.BloomFilter.Redis.Host,
+		Type: c.BloomFilter.Redis.Type,
+		Pass: c.BloomFilter.Redis.Password,
 	})
 
 	if err != nil {
@@ -30,6 +31,6 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		Config:                c,
 		ShortUrlMapRepository: repository.NewShortUrlMap(c.ShortUrlMap.DSN(), c.CacheRedis),
 		SequenceRepository:    repository.NewSequence(c.Sequence.DSN()),
-		Filter:                filter.NewBloomFilter(r, c.BloomFilterConf.Key, c.BloomFilterConf.Bits),
+		Filter:                filter.NewBloomFilter(r, c.BloomFilter.Key, c.BloomFilter.Bits),
 	}
 }

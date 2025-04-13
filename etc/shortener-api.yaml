@@ -3,26 +3,13 @@ Mode: ${APP_ENV}
 Host: 0.0.0.0
 Port: ${APP_PORT}
 
-Operator: ${OPERATOR}
-Domain: ${DOMAIN}
-SensitiveWords: [ "xxx", "sex", "ass", "fuck", "evil" ]
+# 应用基础配置
+App:
+  Operator: ${OPERATOR}
+  Domain: ${DOMAIN}
+  SensitiveWords: [ "xxx", "sex", "ass", "fuck", "evil" ]
 
-BloomFilterConf:
-  RedisHost: ${BLOOM_REDIS_HOST}:${BLOOM_REDIS_PORT}
-  RedisPassword: ${BLOOM_REDIS_PASSWORD}
-  RedisType: ${BLOOM_REDIS_TYPE}
-  Key: ${BLOOM_KEY}
-  Bits: ${BLOOM_BITS}
-
-CacheRedis:
-  - Host: ${CACHE_REDIS_HOST}:${CACHE_REDIS_PORT}
-    Pass: ${CACHE_REDIS_PASSWORD}
-    Type: node
-
-Auth:
-  AccessSecret: ${ACCESS_SECRET}
-  AccessExpire: 86400
-
+# shortUrl配置
 ShortUrlMap:
   User: ${SHORT_URL_MAP_DB_USER}
   Password: ${SHORT_URL_MAP_DB_PASSWORD}
@@ -30,9 +17,30 @@ ShortUrlMap:
   Port: ${SHORT_URL_MAP_DB_PORT}
   DBName: ${SHORT_URL_MAP_DB_NAME}
 
+# sequence配置
 Sequence:
   User: ${SEQUENCE_DB_USER}
   Password: ${SEQUENCE_DB_PASSWORD}
   Host: ${SEQUENCE_DB_HOST}
   Port: ${SEQUENCE_DB_PORT}
   DBName: ${SEQUENCE_DB_NAME}
+
+# 布隆过滤器配置
+BloomFilter:
+  Redis:
+    Host: ${BLOOM_REDIS_HOST}:${BLOOM_REDIS_PORT}
+    Password: ${BLOOM_REDIS_PASSWORD}
+    Type: ${BLOOM_REDIS_TYPE}
+  Key: ${BLOOM_KEY}
+  Bits: ${BLOOM_BITS}
+
+# 缓存Redis配置
+CacheRedis:
+  - Host: ${CACHE_REDIS_HOST}:${CACHE_REDIS_PORT}
+    Pass: ${CACHE_REDIS_PASSWORD}
+    Type: node
+
+# 认证配置
+Auth:
+  AccessSecret: ${ACCESS_SECRET}
+  AccessExpire: 86400

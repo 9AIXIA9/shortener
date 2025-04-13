@@ -9,20 +9,12 @@ import (
 type Config struct {
 	rest.RestConf
 
-	AppConf
-
-	ShortUrlMap MysqlConf
-
-	Sequence MysqlConf
-
-	CacheRedis cache.CacheConf
-
-	BloomFilterConf BloomFilterConf
-
-	Auth struct {
-		AccessSecret string
-		AccessExpire int64
-	}
+	App         AppConf
+	ShortUrlMap ShortUrlConf
+	Sequence    SequenceConf
+	CacheRedis  cache.CacheConf
+	BloomFilter BloomFilterConf
+	Auth        AuthConf
 }
 
 type AppConf struct {
@@ -39,12 +31,29 @@ type MysqlConf struct {
 	DBName   string
 }
 
+type RedisConf struct {
+	Host     string
+	Password string
+	Type     string
+}
+
+type ShortUrlConf struct {
+	MysqlConf
+}
+
+type SequenceConf struct {
+	MysqlConf
+}
+
 type BloomFilterConf struct {
-	RedisHost     string
-	RedisPassword string
-	RedisType     string
-	Key           string
-	Bits          uint
+	Redis RedisConf
+	Key   string
+	Bits  uint
+}
+
+type AuthConf struct {
+	AccessSecret string
+	AccessExpire int64
 }
 
 func (db MysqlConf) DSN() string {
