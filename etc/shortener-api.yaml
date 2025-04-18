@@ -6,7 +6,8 @@ Port: ${APP_PORT}
 # 应用基础配置
 App:
   Operator: ${OPERATOR}
-  Domain: ${DOMAIN}
+  ShortUrlDomain: ${SHORT_URL_DOMAIN}
+  ShortUrlPath: ${SHORT_URL_PATH}
   SensitiveWords: [ "xxx", "sex", "ass", "fuck", "evil" ]
 
 # shortUrl配置

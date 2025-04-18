@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"github.com/zeromicro/go-zero/core/logx"
 	"net/http"
 	"shortener/internal/logic"
 	"shortener/pkg/validate"
@@ -20,9 +19,8 @@ func ShowHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		}
 
 		//参数校验
-		if err := validate.Get().StructCtx(r.Context(), &req); err != nil {
-			logx.Infow("validator check failed", logx.Field("err", err))
-			httpx.ErrorCtx(r.Context(), w, err)
+		if err := validate.Check(r.Context(), &req); err != nil {
+			httpx.ErrorCtx(r.Context(), w, LogError(err))
 			return
 		}
 

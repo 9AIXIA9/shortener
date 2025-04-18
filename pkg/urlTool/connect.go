@@ -44,7 +44,7 @@ func (c *clientImpl) Check(url string) bool {
 	}
 
 	defer func() {
-		if err := resp.Body.Close(); err != nil {
+		if err = resp.Body.Close(); err != nil {
 			logx.Errorf("failed to close the response body: %v, url: %s", err, url)
 		}
 	}()

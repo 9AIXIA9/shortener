@@ -32,7 +32,8 @@ func TestShortenLogic_Shorten(t *testing.T) {
 		App: config.AppConf{
 			Operator:       "test_operator",
 			SensitiveWords: []string{"bad"},
-			Domain:         "example.com",
+			ShortUrlDomain: "example.com",
+			ShortUrlPath:   "/short/",
 		},
 	}
 
@@ -58,20 +59,22 @@ func TestShortenLogic_Shorten(t *testing.T) {
 
 	// 测试场景二：已经是短链接
 	t.Run("already_short_url", func(t *testing.T) {
-		shortURL := "abc123"
-		url := "http://" + cfg.App.Domain + "/" + shortURL
+		newSvcCtx := &svc.ServiceContext{
+			Config:                cfg,
+			ShortUrlMapRepository: mockShortUrlMap,
+			SequenceRepository:    mockSequence,
+			Filter:                mockFilter,
+		}
 
-		// 设置URL检查返回有效
+		url := "http://example.com/short/abc123"
 		mockURLClient.EXPECT().Check(url).Return(true)
 
-		// 当URL是我们的短链域名时，需要模拟查询数据库
-		mockShortUrlMap.EXPECT().FindOneByShortUrl(gomock.Any(), shortURL).Return(&model.ShortUrlMap{ShortUrl: shortURL}, nil)
-
-		l := NewShortenLogic(context.Background(), svcCtx, mockURLClient)
+		l := NewShortenLogic(context.Background(), newSvcCtx, mockURLClient)
 		resp, err := l.Shorten(&types.ShortenRequest{LongUrl: url})
 
-		assert.NotNil(t, err) // 期望返回错误
+		assert.NotNil(t, err)
 		assert.Nil(t, resp)
+		assert.Contains(t, err.Error(), "URL is already shortUrl")
 	})
 
 	// 测试场景三：已存在的长链接（通过MD5查询���功）
@@ -95,7 +98,7 @@ func TestShortenLogic_Shorten(t *testing.T) {
 
 		assert.Nil(t, err)
 		assert.NotNil(t, resp)
-		assert.Equal(t, svcCtx.Config.App.Domain+"/"+shortURL, resp.ShortUrl)
+		assert.Equal(t, svcCtx.Config.App.ShortUrlDomain+svcCtx.Config.App.ShortUrlPath+shortURL, resp.ShortUrl)
 	})
 
 	// 测试场景四：新的长链接，需要生成短链接
@@ -130,7 +133,7 @@ func TestShortenLogic_Shorten(t *testing.T) {
 				Operator: "test_operator",
 				// 使用包含0-9,a-z,A-Z的敏感词，确保任何生成的短链接都会触发敏感检测
 				SensitiveWords: []string{"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b"},
-				Domain:         "example.com",
+				ShortUrlDomain: "example.com",
 			},
 		}
 
@@ -189,53 +192,47 @@ func TestShortenLogic_isValidUrl(t *testing.T) {
 }
 
 // 测试短链接检查函数
-func TestShortenLogic_isAlreadyShortUrl(t *testing.T) {
+func TestShortenLogic_inShortUrlDomainPath(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockShortUrlMap := repositoryMock.NewMockShortUrlMap(ctrl)
-
 	cfg := config.Config{
 		App: config.AppConf{
-			Domain: "example.com",
+			Operator:       "test_operator",
+			SensitiveWords: []string{"bad"},
+			ShortUrlDomain: "example.com",
+			ShortUrlPath:   "/short/", // 修改为与业务代码一致的路径
 		},
 	}
 
 	svcCtx := &svc.ServiceContext{
-		Config:                cfg,
-		ShortUrlMapRepository: mockShortUrlMap,
+		Config: cfg,
 	}
 
 	t.Run("not_short_url", func(t *testing.T) {
 		url := "http://other.com/page"
 
 		l := &ShortenLogic{ctx: context.Background(), svcCtx: svcCtx}
-		result, err := l.isAlreadyShortUrl(url)
+		result := l.inShortUrlDomainPath(url)
 
-		assert.False(t, result) // 不是短链接，返回true
-		assert.Nil(t, err)
+		assert.False(t, result) // 不是短链接，返回false
 	})
 
 	t.Run("is_short_url", func(t *testing.T) {
-		url := "http://example.com/abc123"
-		mockShortUrlMap.EXPECT().FindOneByShortUrl(gomock.Any(), "abc123").Return(&model.ShortUrlMap{ShortUrl: "abc123"}, nil)
-
+		url := "http://example.com/short/abc123"
 		l := &ShortenLogic{ctx: context.Background(), svcCtx: svcCtx}
-		result, err := l.isAlreadyShortUrl(url)
-
+		result := l.inShortUrlDomainPath(url)
 		assert.True(t, result)
-		assert.Nil(t, err)
 	})
 
-	t.Run("repository_error", func(t *testing.T) {
-		url := "http://example.com/error"
-		mockShortUrlMap.EXPECT().FindOneByShortUrl(gomock.Any(), "error").Return(nil, errorx.New(errorx.CodeDatabaseError, "database error"))
+	// 添加根路径测试
+	t.Run("is_root_path", func(t *testing.T) {
+		url := "http://example.com/"
 
 		l := &ShortenLogic{ctx: context.Background(), svcCtx: svcCtx}
-		result, err := l.isAlreadyShortUrl(url)
+		result := l.inShortUrlDomainPath(url)
 
-		assert.False(t, result)
-		assert.NotNil(t, err)
+		assert.False(t, result) // 是短链接域名但是根路径，返回 false
 	})
 }
 
@@ -340,8 +337,8 @@ func TestShortenLogic_storeInRepository(t *testing.T) {
 
 	cfg := config.Config{
 		App: config.AppConf{
-			Domain:   "example.com",
-			Operator: "test_operator",
+			ShortUrlDomain: "example.com",
+			Operator:       "test_operator",
 		},
 	}
 

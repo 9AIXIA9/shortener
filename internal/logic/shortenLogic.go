@@ -11,6 +11,7 @@ import (
 	"shortener/pkg/md5"
 	"shortener/pkg/sensitive"
 	"shortener/pkg/urlTool"
+	"strings"
 )
 
 type ShortenLogic struct {
@@ -36,10 +37,7 @@ func (l *ShortenLogic) Shorten(req *types.ShortenRequest) (*types.ShortenRespons
 		return nil, errorx.New(errorx.CodeParamError, "invalid URL")
 	}
 
-	isShortUrl, err := l.isAlreadyShortUrl(req.LongUrl)
-	if err != nil {
-		return nil, err
-	}
+	isShortUrl := l.inShortUrlDomainPath(req.LongUrl)
 	if isShortUrl {
 		return nil, errorx.New(errorx.CodeParamError, "URL is already shortUrl")
 	}
@@ -93,30 +91,19 @@ func (l *ShortenLogic) isValidUrl(URL string) bool {
 	return l.client.Check(URL)
 }
 
-func (l *ShortenLogic) isAlreadyShortUrl(url string) (bool, error) {
-	// 解析URL获取域名和路径
+func (l *ShortenLogic) inShortUrlDomainPath(url string) bool {
 	domain, path := urlTool.GetUrlDomainAndPath(url)
 
-	// 检查是否是我们的短链域名
-	if domain == l.svcCtx.Config.App.Domain {
-		// 域名匹配，查询数据库验证短链接是否存在
-		if path != "" {
-			_, err := l.svcCtx.ShortUrlMapRepository.FindOneByShortUrl(l.ctx, path)
-			if err != nil {
-				if errorx.Is(err, errorx.CodeNotFound) {
-					// 在数据库中不存在
-					return false, nil
-				}
-				// 其他数据库错误
-				return false, errorx.Wrap(err, errorx.CodeSystemError, "check short url failed")
-			}
-			// 数据库中存在
-			return true, nil
+	if domain == l.svcCtx.Config.App.ShortUrlDomain {
+		// 处理配置路径可能带有前导斜杠的情况
+		configPath := l.svcCtx.Config.App.ShortUrlPath
+		if strings.HasPrefix(configPath, "/") {
+			configPath = configPath[1:] // 去掉前导斜杠
 		}
+		return strings.HasPrefix(path, configPath)
 	}
 
-	// 不是短链域名
-	return false, nil
+	return false
 }
 
 // 将长链接转换为MD5
@@ -194,5 +181,5 @@ func (l *ShortenLogic) storeShortUrlInFilter(shortUrl string) error {
 }
 
 func (l *ShortenLogic) getFullShortLink(shortUrl string) string {
-	return l.svcCtx.Config.App.Domain + "/" + shortUrl
+	return l.svcCtx.Config.App.ShortUrlDomain + l.svcCtx.Config.App.ShortUrlPath + shortUrl
 }

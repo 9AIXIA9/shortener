@@ -20,7 +20,8 @@ type Config struct {
 type AppConf struct {
 	Operator       string
 	SensitiveWords []string
-	Domain         string
+	ShortUrlDomain string
+	ShortUrlPath   string
 }
 
 type MysqlConf struct {

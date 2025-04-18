@@ -11,6 +11,7 @@ type Code int32
 // Standard error codes for common scenarios.
 const (
 	CodeSuccess Code = 1000 + iota
+
 	CodeSystemError
 	CodeDatabaseError
 	CodeCacheError

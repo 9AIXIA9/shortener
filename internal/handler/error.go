@@ -18,21 +18,19 @@ func LogError(err error) error {
 
 	if errors.As(err, &targetError) {
 		// 记录详细错误信息
-		switch {
+		switch targetError.Code {
 		// 保留原始错误信息和代码，但避免将敏感信息暴露给客户端
-		case (targetError.Code) <= errorx.CodeSuccess && (targetError.Code) >= errorx.CodeCacheError:
+		case errorx.CodeSystemError, errorx.CodeDatabaseError, errorx.CodeCacheError:
 			// 系统级错误使用通用消息
 			logx.Errorw(systemErrorMsg, logx.Field("err", targetError.Detail()))
 			return errorx.New(targetError.Code, getPublicErrorMessage(targetError.Code))
-		case (targetError.Code) >= errorx.CodeParamError && (targetError.Code) <= errorx.CodeServiceUnavailable:
+		case errorx.CodeParamError, errorx.CodeNotFound, errorx.CodeServiceUnavailable:
 			logx.Debugw(logicErrorMsg, logx.Field("msg", targetError.Msg))
-			return errorx.New(targetError.Code, getPublicErrorMessage(targetError.Code))
+			return errorx.New(targetError.Code, targetError.Msg)
 		default:
 			logx.Errorw("invalid error code", logx.Field("err", targetError.Detail()))
+			return errorx.New(errorx.CodeSystemError, systemErrorMsg)
 		}
-
-		// 业务错误保留原始信息
-		return targetError
 	}
 
 	// 非ErrorX类型
