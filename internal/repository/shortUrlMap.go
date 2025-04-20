@@ -6,6 +6,7 @@ import (
 	"errors"
 	"github.com/zeromicro/go-zero/core/stores/cache"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
+	"shortener/internal/config"
 	"shortener/internal/model"
 	"shortener/pkg/errorx"
 )
@@ -21,8 +22,8 @@ type ShortUrlMap interface {
 }
 
 // NewShortUrlMap 创建短URL映射仓库的新实例
-func NewShortUrlMap(dsn string, cacheConf cache.CacheConf) ShortUrlMap {
-	conn := sqlx.NewMysql(dsn)
+func NewShortUrlMap(conf config.ShortUrlConf, cacheConf cache.CacheConf) ShortUrlMap {
+	conn := sqlx.NewMysql(conf.Mysql.DSN())
 	return &shortUrlMap{
 		model: model.NewShortUrlMapModel(conn, cacheConf),
 	}

@@ -4,7 +4,9 @@ package filter
 import (
 	"context"
 	"github.com/zeromicro/go-zero/core/bloom"
+	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/core/stores/redis"
+	"shortener/internal/config"
 )
 
 type Filter interface {
@@ -12,10 +14,20 @@ type Filter interface {
 	ExistsCtx(ctx context.Context, data []byte) (bool, error)
 }
 
-func NewBloomFilter(redisConfig *redis.Redis, key string, bits uint) Filter {
+func NewBloomFilter(conf config.BloomFilterConf) Filter {
+	// 初始化布隆过滤器Redis连接
+	redisConnection, err := redis.NewRedis(redis.RedisConf{
+		Host: conf.Redis.Addr,
+		Type: conf.Redis.Type,
+		Pass: conf.Redis.Password,
+	})
+	if err != nil {
+		logx.Severef("NewServiceContext redis.NewRedis failed,err:%v", err)
+	}
+
 	return bloom.New(
-		redisConfig,
-		key,
-		bits,
+		redisConnection,
+		conf.Key,
+		conf.Bits,
 	)
 }

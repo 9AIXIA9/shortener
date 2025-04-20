@@ -12,28 +12,38 @@ App:
 
 # shortUrl配置
 ShortUrlMap:
-  User: ${SHORT_URL_MAP_DB_USER}
-  Password: ${SHORT_URL_MAP_DB_PASSWORD}
-  Host: ${SHORT_URL_MAP_DB_HOST}
-  Port: ${SHORT_URL_MAP_DB_PORT}
-  DBName: ${SHORT_URL_MAP_DB_NAME}
+  Mysql:
+    User: ${SHORT_URL_MAP_DB_USER}
+    Password: ${SHORT_URL_MAP_DB_PASSWORD}
+    Host: ${SHORT_URL_MAP_DB_HOST}
+    Port: ${SHORT_URL_MAP_DB_PORT}
+    DBName: ${SHORT_URL_MAP_DB_NAME}
 
 # sequence配置
 Sequence:
-  User: ${SEQUENCE_DB_USER}
-  Password: ${SEQUENCE_DB_PASSWORD}
-  Host: ${SEQUENCE_DB_HOST}
-  Port: ${SEQUENCE_DB_PORT}
-  DBName: ${SEQUENCE_DB_NAME}
+  Mysql:
+    User: ${SEQUENCE_DB_USER}
+    Password: ${SEQUENCE_DB_PASSWORD}
+    Host: ${SEQUENCE_DB_HOST}
+    Port: ${SEQUENCE_DB_PORT}
+    DBName: ${SEQUENCE_DB_NAME}
+  Redis:
+    Addr: ${SEQUENCE_REDIS_HOST}:${SEQUENCE_REDIS_PORT}
+    Password: ${SEQUENCE_REDIS_PASSWORD}
+    Type: ${SEQUENCE_REDIS_TYPE}
+  BatchSize: 1000
+  Threshold: 10
+  KeySequenceID: ${SEQUENCE_ID_KEY}
+  KeySequenceState: ${SEQUENCE_STATE_KEY}
 
 # 布隆过滤器配置
-BloomFilter:
+ShortUrlFilter:
   Redis:
-    Host: ${BLOOM_REDIS_HOST}:${BLOOM_REDIS_PORT}
-    Password: ${BLOOM_REDIS_PASSWORD}
-    Type: ${BLOOM_REDIS_TYPE}
-  Key: ${BLOOM_KEY}
-  Bits: ${BLOOM_BITS}
+    Addr: ${SHORT_URL_FILTER_REDIS_HOST}:${SHORT_URL_FILTER_REDIS_PORT}
+    Password: ${SHORT_URL_FILTER_REDIS_PASSWORD}
+    Type: ${SHORT_URL_FILTER_REDIS_TYPE}
+  Bits: ${SHORT_URL_FILTER_BITS}
+  Key: ${SHORT_URL_FILTER_KEY}
 
 # 缓存Redis配置
 CacheRedis:

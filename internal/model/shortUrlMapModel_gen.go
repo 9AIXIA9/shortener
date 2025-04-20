@@ -45,14 +45,17 @@ type (
 	}
 
 	ShortUrlMap struct {
-		Id       uint64    `db:"id"`        // 主键ID
-		CreateAt time.Time `db:"create_at"` // 创建时间
-		CreateBy string    `db:"create_by"` // 创建者
-		UpdateAt time.Time `db:"update_at"` // 更新时间
-		IsDel    uint64    `db:"is_del"`    // 是否删除：0正常1删除
-		LongUrl  string    `db:"long_url"`  // 长链接
-		Md5      string    `db:"md5"`       // 长链接MD5
-		ShortUrl string    `db:"short_url"` // 短链接
+		Id         uint64       `db:"id"`          // 主键ID
+		CreateAt   time.Time    `db:"create_at"`   // 创建时间
+		CreateBy   string       `db:"create_by"`   // 创建者
+		UpdateAt   time.Time    `db:"update_at"`   // 更新时间
+		UpdateBy   string       `db:"update_by"`   // 更新者
+		IsDel      uint64       `db:"is_del"`      // 是否删除：0正常1删除
+		LongUrl    string       `db:"long_url"`    // 长链接
+		Md5        string       `db:"md5"`         // 长链接MD5
+		ShortUrl   string       `db:"short_url"`   // 短链接
+		ExpireAt   sql.NullTime `db:"expire_at"`   // 过期时间
+		ClickCount uint64       `db:"click_count"` // 点击次数
 	}
 )
 
@@ -141,8 +144,8 @@ func (m *defaultShortUrlMapModel) Insert(ctx context.Context, data *ShortUrlMap)
 	shortUrlMapMd5Key := fmt.Sprintf("%s%v", cacheShortUrlMapMd5Prefix, data.Md5)
 	shortUrlMapShortUrlKey := fmt.Sprintf("%s%v", cacheShortUrlMapShortUrlPrefix, data.ShortUrl)
 	ret, err := m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (result sql.Result, err error) {
-		query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?)", m.table, shortUrlMapRowsExpectAutoSet)
-		return conn.ExecCtx(ctx, query, data.CreateBy, data.IsDel, data.LongUrl, data.Md5, data.ShortUrl)
+		query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?, ?)", m.table, shortUrlMapRowsExpectAutoSet)
+		return conn.ExecCtx(ctx, query, data.CreateBy, data.UpdateBy, data.IsDel, data.LongUrl, data.Md5, data.ShortUrl, data.ExpireAt, data.ClickCount)
 	}, shortUrlMapIdKey, shortUrlMapMd5Key, shortUrlMapShortUrlKey)
 	return ret, err
 }
@@ -158,7 +161,7 @@ func (m *defaultShortUrlMapModel) Update(ctx context.Context, newData *ShortUrlM
 	shortUrlMapShortUrlKey := fmt.Sprintf("%s%v", cacheShortUrlMapShortUrlPrefix, data.ShortUrl)
 	_, err = m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (result sql.Result, err error) {
 		query := fmt.Sprintf("update %s set %s where `id` = ?", m.table, shortUrlMapRowsWithPlaceHolder)
-		return conn.ExecCtx(ctx, query, newData.CreateBy, newData.IsDel, newData.LongUrl, newData.Md5, newData.ShortUrl, newData.Id)
+		return conn.ExecCtx(ctx, query, newData.CreateBy, newData.UpdateBy, newData.IsDel, newData.LongUrl, newData.Md5, newData.ShortUrl, newData.ExpireAt, newData.ClickCount, newData.Id)
 	}, shortUrlMapIdKey, shortUrlMapMd5Key, shortUrlMapShortUrlKey)
 	return err
 }

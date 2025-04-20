@@ -9,12 +9,12 @@ import (
 type Config struct {
 	rest.RestConf
 
-	App         AppConf
-	ShortUrlMap ShortUrlConf
-	Sequence    SequenceConf
-	CacheRedis  cache.CacheConf
-	BloomFilter BloomFilterConf
-	Auth        AuthConf
+	App            AppConf
+	ShortUrlMap    ShortUrlConf
+	Sequence       SequenceConf
+	CacheRedis     cache.CacheConf
+	ShortUrlFilter BloomFilterConf
+	Auth           AuthConf
 }
 
 type AppConf struct {
@@ -33,23 +33,28 @@ type MysqlConf struct {
 }
 
 type RedisConf struct {
-	Host     string
+	Addr     string
 	Password string
 	Type     string
 }
 
 type ShortUrlConf struct {
-	MysqlConf
+	Mysql MysqlConf
 }
 
 type SequenceConf struct {
-	MysqlConf
+	Mysql            MysqlConf
+	Redis            RedisConf
+	Threshold        int
+	BatchSize        uint64
+	KeySequenceID    string
+	KeySequenceState string
 }
 
 type BloomFilterConf struct {
 	Redis RedisConf
-	Key   string
 	Bits  uint
+	Key   string
 }
 
 type AuthConf struct {
