@@ -31,8 +31,12 @@ Sequence:
     Addr: ${SEQUENCE_REDIS_HOST}:${SEQUENCE_REDIS_PORT}
     Password: ${SEQUENCE_REDIS_PASSWORD}
     Type: ${SEQUENCE_REDIS_TYPE}
-  BatchSize: 1000
-  Threshold: 10
+  RetryBackoff: ${SEQUENCE_RETRY_BACKOFF}
+  MaxRetries: ${SEQUENCE_MAX_RETRIES}
+  CachePatch: ${SEQUENCE_CACHE_PATCH}
+  CacheThreshold: ${SEQUENCE_CACHE_THRESHOLD}
+  LocalPatch: ${SEQUENCE_LOCAL_PATCH}
+  LocalThreshold: ${SEQUENCE_LOCAL_THRESHOLD}
   KeySequenceID: ${SEQUENCE_ID_KEY}
   KeySequenceState: ${SEQUENCE_STATE_KEY}
 

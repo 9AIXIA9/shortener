@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/zeromicro/go-zero/core/stores/cache"
 	"github.com/zeromicro/go-zero/rest"
+	"time"
 )
 
 type Config struct {
@@ -45,8 +46,12 @@ type ShortUrlConf struct {
 type SequenceConf struct {
 	Mysql            MysqlConf
 	Redis            RedisConf
-	Threshold        int
-	BatchSize        uint64
+	RetryBackoff     time.Duration
+	MaxRetries       int
+	CachePatch       uint64
+	CacheThreshold   int
+	LocalPatch       uint64
+	LocalThreshold   int
 	KeySequenceID    string
 	KeySequenceState string
 }
