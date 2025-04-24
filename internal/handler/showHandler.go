@@ -20,16 +20,15 @@ func ShowHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 
 		//参数校验
 		if err := validate.Check(r.Context(), &req); err != nil {
-			httpx.ErrorCtx(r.Context(), w, LogError(err))
+			ResponseError(w, err)
 			return
 		}
 
 		l := logic.NewShowLogic(r.Context(), svcCtx)
 		resp, err := l.Show(&req)
 		if err != nil {
-			httpx.ErrorCtx(r.Context(), w, LogError(err))
+			ResponseError(w, err)
 		} else {
-			//httpx.OkJsonCtx(r.Context(), w, resp)
 			http.Redirect(w, r, resp.LongUrl, http.StatusFound)
 		}
 	}
