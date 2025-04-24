@@ -13,7 +13,7 @@ const (
 	logicErrorMsg    = "user business logic error"
 )
 
-func LogError(err error) error {
+func HandleError(err error) error {
 	var targetError *errorx.ErrorX
 
 	if errors.As(err, &targetError) {
