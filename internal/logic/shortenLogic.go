@@ -34,13 +34,13 @@ func (l *ShortenLogic) Shorten(req *types.ShortenRequest) (*types.ShortenRespons
 	//校验参数
 	isValidUrl, err := l.testConnectivity(req.LongUrl)
 	if err != nil {
-		return nil, errorx.Wrap(err, errorx.CodeParamError, "failed to test connectivity of url").WithMeta("url", req.LongUrl)
+		return nil, err
 	}
 	if !isValidUrl {
 		return nil, errorx.New(errorx.CodeParamError, "failed to connect this URL")
 	}
 
-	logx.Infof("I can connect to this URL:%v", req.LongUrl)
+	logx.Infof("this URL is valid:%v", req.LongUrl)
 
 	isShortUrl := l.inShortUrlDomainPath(req.LongUrl)
 	if isShortUrl {

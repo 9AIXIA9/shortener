@@ -16,11 +16,15 @@ func GetDomainAndPath(URL string) (domain string, basePath string) {
 		return "", ""
 	}
 
-	if len(myUrl.Host) == 0 || len(myUrl.Path) == 0 {
+	if len(myUrl.Host) == 0 {
 		return "", ""
 	}
 
 	basePath = myUrl.Path
+	if len(basePath) == 0 {
+		return myUrl.Host, ""
+	}
+
 	if len(basePath) > 0 && basePath[0] == '/' {
 		basePath = basePath[1:]
 	}

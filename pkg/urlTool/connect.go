@@ -3,12 +3,14 @@ package urlTool
 
 import (
 	"context"
+	"errors"
 	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/core/syncx"
 	"net"
 	"net/http"
 	"shortener/internal/config"
 	"shortener/pkg/errorx"
+	"strings"
 	"time"
 )
 
@@ -82,26 +84,37 @@ func (c *clientImpl) Check(URL string) (bool, error) {
 	}
 
 	result, err := globalSF.Do(URL, func() (any, error) {
-		return c.checkWithRetry(URL), nil
+		return c.checkWithRetry(URL)
 	})
 
 	return result.(bool), err
 }
 
-func (c *clientImpl) checkWithRetry(url string) bool {
+func (c *clientImpl) checkWithRetry(url string) (success bool, err error) {
 	for i := 0; i <= c.config.MaxRetries; i++ {
-		success := c.check(url)
-		if success {
-			return true
+		success, err = c.check(url)
+		if success && err == nil {
+			return true, nil
 		}
+
+		if err != nil && !errorx.Is(err, errorx.CodeTimeout) {
+			return false, err
+		}
+
 		if i < c.config.MaxRetries {
 			time.Sleep(time.Duration(50*i) * time.Millisecond) // 退避策略
 		}
 	}
-	return false
+
+	// 所有重试都失败后
+	if err != nil {
+		return false, err
+	}
+	// 处理没有明确错误但请求未成功的情况（如状态码非2xx）
+	return false, errorx.New(errorx.CodeTimeout, "check URL failed after all retries")
 }
 
-func (c *clientImpl) check(url string) bool {
+func (c *clientImpl) check(url string) (bool, error) {
 	defer func() {
 		if r := recover(); r != nil {
 			logx.Errorf("panic during URL check: %v, url: %s", r, url)
@@ -110,12 +123,24 @@ func (c *clientImpl) check(url string) bool {
 
 	resp, err := c.client.Head(url)
 	if err != nil {
-		logx.Debugf("URL check failed: %v, url: %s", err, url)
-		return false
+		// 检查是否是超时错误
+		var netErr net.Error
+		if errors.As(err, &netErr) && netErr.Timeout() {
+			return false, errorx.NewWithCause(errorx.CodeTimeout, "the connection to this url timed out", err)
+		}
+
+		// 通过错误消息检查是否为超时
+		if strings.Contains(err.Error(), "timeout") ||
+			strings.Contains(err.Error(), "deadline exceeded") {
+			return false, errorx.NewWithCause(errorx.CodeTimeout, "the connection timed out", err)
+		}
+
+		// 其他错误情况
+		return false, errorx.NewWithCause(errorx.CodeParamError, "can't connect to this url", err)
 	}
 
 	if resp == nil {
-		return false
+		return false, errorx.New(errorx.CodeParamError, "there is no reply")
 	}
 
 	defer func() {
@@ -124,7 +149,7 @@ func (c *clientImpl) check(url string) bool {
 		}
 	}()
 
-	return isSuccessStatusCode(resp.StatusCode)
+	return isSuccessStatusCode(resp.StatusCode), nil
 }
 
 func isSuccessStatusCode(statusCode int) bool {
