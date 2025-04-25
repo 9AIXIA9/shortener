@@ -81,12 +81,7 @@ func (c *clientImpl) Check(URL string) (bool, error) {
 		return false, errorx.New(errorx.CodeParamError, "URL is null")
 	}
 
-	domain, err := getDomain(URL)
-	if err != nil || len(domain) == 0 {
-		return false, errorx.Wrap(err, errorx.CodeParamError, "failed to get domain")
-	}
-
-	result, err := globalSF.Do(domain, func() (any, error) {
+	result, err := globalSF.Do(URL, func() (any, error) {
 		return c.checkWithRetry(URL), nil
 	})
 
