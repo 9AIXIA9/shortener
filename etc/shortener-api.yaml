@@ -59,3 +59,10 @@ CacheRedis:
 Auth:
   AccessSecret: ${ACCESS_SECRET}
   AccessExpire: 86400
+
+Connect:
+  DNSServer: ${CONNECT_DNS_SERVER}
+  Timeout: ${CONNECT_TIMEOUT}
+  MaxRetries: ${CONNECT_MAX_RETRIES}
+  MaxIdleConns: ${CONNECT_MAX_IDLE_CONNS}
+  IdleConnTimeout : ${CONNECT_IDLE_CONN_TIMEOUT}

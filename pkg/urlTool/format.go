@@ -2,10 +2,11 @@ package urlTool
 
 import (
 	"net/url"
+	"shortener/pkg/errorx"
 )
 
-// GetUrlDomainAndPath 获取URL中的域名和基础路径
-func GetUrlDomainAndPath(URL string) (domain string, basePath string) {
+// GetDomainAndPath 获取URL中的域名和基础路径
+func GetDomainAndPath(URL string) (domain string, basePath string) {
 	if len(URL) == 0 {
 		return "", ""
 	}
@@ -26,4 +27,13 @@ func GetUrlDomainAndPath(URL string) (domain string, basePath string) {
 	}
 
 	return myUrl.Host, basePath
+}
+
+// GetDomain 获取URL中的域名
+func getDomain(rawURL string) (string, error) {
+	u, err := url.Parse(rawURL)
+	if err != nil || u == nil {
+		return "", errorx.NewWithCause(errorx.CodeParamError, "failed to parse url", err)
+	}
+	return u.Hostname(), nil
 }

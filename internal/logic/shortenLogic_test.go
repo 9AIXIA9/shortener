@@ -48,28 +48,22 @@ func TestShortenLogic_Shorten(t *testing.T) {
 	// 测试场景一：无效URL
 	t.Run("invalid_url", func(t *testing.T) {
 		longURL := "invalid-url"
-		mockURLClient.EXPECT().Check(longURL).Return(false)
+		mockURLClient.EXPECT().Check(longURL).Return(false, nil)
 
 		l := NewShortenLogic(context.Background(), svcCtx, mockURLClient)
 		resp, err := l.Shorten(&types.ShortenRequest{LongUrl: longURL})
 
 		assert.Nil(t, resp)
 		assert.NotNil(t, err)
+		assert.Contains(t, err.Error(), "failed to connect this URL")
 	})
 
 	// 测试场景二：已经是短链接
 	t.Run("already_short_url", func(t *testing.T) {
-		newSvcCtx := &svc.ServiceContext{
-			Config:                cfg,
-			ShortUrlMapRepository: mockShortUrlMap,
-			SequenceRepository:    mockSequence,
-			Filter:                mockFilter,
-		}
-
 		url := "http://example.com/short/abc123"
-		mockURLClient.EXPECT().Check(url).Return(true)
+		mockURLClient.EXPECT().Check(url).Return(true, nil)
 
-		l := NewShortenLogic(context.Background(), newSvcCtx, mockURLClient)
+		l := NewShortenLogic(context.Background(), svcCtx, mockURLClient)
 		resp, err := l.Shorten(&types.ShortenRequest{LongUrl: url})
 
 		assert.NotNil(t, err)
@@ -77,7 +71,7 @@ func TestShortenLogic_Shorten(t *testing.T) {
 		assert.Contains(t, err.Error(), "URL is already shortUrl")
 	})
 
-	// 测试场景三：已存在的长链接（通过MD5查询���功）
+	// 测试场景三：已存在的长链接（通过MD5查询成功）
 	t.Run("existing_long_url", func(t *testing.T) {
 		longURL := "http://example.com"
 		shortURL := "abc123"
@@ -86,7 +80,7 @@ func TestShortenLogic_Shorten(t *testing.T) {
 		correctMd5, _ := md5.Sum([]byte(longURL))
 
 		// 设置URL检查返回有效
-		mockURLClient.EXPECT().Check(longURL).Return(true)
+		mockURLClient.EXPECT().Check(longURL).Return(true, nil)
 
 		// 使用正确计算出的MD5值
 		mockShortUrlMap.EXPECT().FindOneByMd5(gomock.Any(), correctMd5).Return(&model.ShortUrlMap{
@@ -106,7 +100,7 @@ func TestShortenLogic_Shorten(t *testing.T) {
 		longURL := "http://newtest.com/page"
 		correctMd5, _ := md5.Sum([]byte(longURL))
 
-		mockURLClient.EXPECT().Check(longURL).Return(true)
+		mockURLClient.EXPECT().Check(longURL).Return(true, nil)
 		mockShortUrlMap.EXPECT().FindOneByMd5(gomock.Any(), correctMd5).Return(nil, errorx.New(errorx.CodeNotFound, "data is not found"))
 
 		// 期望生成序列号并转为短链接
@@ -123,7 +117,7 @@ func TestShortenLogic_Shorten(t *testing.T) {
 
 		assert.Nil(t, err)
 		assert.NotNil(t, resp)
-		assert.Contains(t, resp.ShortUrl, "example.com/")
+		assert.Contains(t, resp.ShortUrl, "example.com/short/")
 	})
 
 	// 测试场景五：生成短链接时遇到敏感词
@@ -134,6 +128,7 @@ func TestShortenLogic_Shorten(t *testing.T) {
 				// 使用包含0-9,a-z,A-Z的敏感词，确保任何生成的短链接都会触发敏感检测
 				SensitiveWords: []string{"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b"},
 				ShortUrlDomain: "example.com",
+				ShortUrlPath:   "/short/",
 			},
 		}
 
@@ -147,7 +142,7 @@ func TestShortenLogic_Shorten(t *testing.T) {
 		longURL := "http://sensitive.com/page"
 		md5Hex, _ := md5.Sum([]byte(longURL))
 
-		mockURLClient.EXPECT().Check(longURL).Return(true)
+		mockURLClient.EXPECT().Check(longURL).Return(true, nil)
 		mockShortUrlMap.EXPECT().FindOneByMd5(gomock.Any(), md5Hex).Return(nil, errorx.New(errorx.CodeNotFound, "data is not found"))
 
 		// 模拟5次尝试都生成了包含敏感词的短链接
@@ -160,11 +155,12 @@ func TestShortenLogic_Shorten(t *testing.T) {
 
 		assert.Nil(t, resp)
 		assert.NotNil(t, err)
+		assert.Contains(t, err.Error(), "unable to generate appropriate short link")
 	})
 }
 
 // 测试URL有效性检查函数
-func TestShortenLogic_isValidUrl(t *testing.T) {
+func TestShortenLogic_testConnectivity(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -172,26 +168,26 @@ func TestShortenLogic_isValidUrl(t *testing.T) {
 
 	t.Run("valid_url", func(t *testing.T) {
 		url := "http://valid.com"
-		mockURLClient.EXPECT().Check(url).Return(true)
+		mockURLClient.EXPECT().Check(url).Return(true, nil)
 
 		l := &ShortenLogic{client: mockURLClient}
-		result := l.isValidUrl(url)
+		result, _ := l.testConnectivity(url)
 
 		assert.True(t, result)
 	})
 
 	t.Run("invalid_url", func(t *testing.T) {
 		url := "invalid-url"
-		mockURLClient.EXPECT().Check(url).Return(false)
+		mockURLClient.EXPECT().Check(url).Return(false, nil)
 
 		l := &ShortenLogic{client: mockURLClient}
-		result := l.isValidUrl(url)
+		result, _ := l.testConnectivity(url)
 
 		assert.False(t, result)
 	})
 }
 
-// 测试短链接检查函数
+// 测试短���接检查函数
 func TestShortenLogic_inShortUrlDomainPath(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()

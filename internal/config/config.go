@@ -16,6 +16,7 @@ type Config struct {
 	CacheRedis     cache.CacheConf
 	ShortUrlFilter BloomFilterConf
 	Auth           AuthConf
+	Connect        ConnectConf
 }
 
 type AppConf struct {
@@ -65,6 +66,14 @@ type BloomFilterConf struct {
 type AuthConf struct {
 	AccessSecret string
 	AccessExpire int64
+}
+
+type ConnectConf struct {
+	DNSServer       string
+	Timeout         time.Duration
+	MaxRetries      int
+	MaxIdleConns    int
+	IdleConnTimeout time.Duration
 }
 
 func (db MysqlConf) DSN() string {

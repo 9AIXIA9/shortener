@@ -32,10 +32,15 @@ func NewShortenLogic(ctx context.Context, svcCtx *svc.ServiceContext, client url
 
 func (l *ShortenLogic) Shorten(req *types.ShortenRequest) (*types.ShortenResponse, error) {
 	//校验参数
-	isValidUrl := l.isValidUrl(req.LongUrl)
-	if !isValidUrl {
-		return nil, errorx.New(errorx.CodeParamError, "invalid URL")
+	isValidUrl, err := l.testConnectivity(req.LongUrl)
+	if err != nil {
+		return nil, errorx.Wrap(err, errorx.CodeParamError, "failed to test connectivity of url").WithMeta("url", req.LongUrl)
 	}
+	if !isValidUrl {
+		return nil, errorx.New(errorx.CodeParamError, "failed to connect this URL")
+	}
+
+	logx.Infof("I can connect to this URL:%v", req.LongUrl)
 
 	isShortUrl := l.inShortUrlDomainPath(req.LongUrl)
 	if isShortUrl {
@@ -87,12 +92,12 @@ func (l *ShortenLogic) Shorten(req *types.ShortenRequest) (*types.ShortenRespons
 	return nil, errorx.New(errorx.CodeDatabaseError, "shortUrl is empty")
 }
 
-func (l *ShortenLogic) isValidUrl(URL string) bool {
+func (l *ShortenLogic) testConnectivity(URL string) (bool, error) {
 	return l.client.Check(URL)
 }
 
 func (l *ShortenLogic) inShortUrlDomainPath(url string) bool {
-	domain, path := urlTool.GetUrlDomainAndPath(url)
+	domain, path := urlTool.GetDomainAndPath(url)
 
 	if domain == l.svcCtx.Config.App.ShortUrlDomain {
 		// 处理配置路径可能带有前导斜杠的情况
