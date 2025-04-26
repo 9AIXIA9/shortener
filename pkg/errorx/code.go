@@ -4,6 +4,8 @@
 // associates them with errors for better debugging and tracing.
 package errorx
 
+import "net/http"
+
 // Code represents application-specific error codes.
 // These codes help categorize errors and provide consistent error responses.
 type Code int32
@@ -18,6 +20,7 @@ const (
 
 	CodeParamError
 	CodeNotFound
+	CodeTimeout
 	CodeServiceUnavailable
 )
 
@@ -32,16 +35,18 @@ const (
 func ToHTTPStatus(code Code) int {
 	switch code {
 	case CodeSuccess:
-		return 200 // OK
+		return http.StatusOK // OK
 	case CodeParamError:
-		return 400 // Bad Request
+		return http.StatusBadRequest // Bad Request
 	case CodeNotFound:
-		return 404 // Not Found
+		return http.StatusNotFound // Not Found
 	case CodeDatabaseError, CodeCacheError, CodeSystemError:
-		return 500 // Internal Server Error
+		return http.StatusInternalServerError // Internal Server Error
 	case CodeServiceUnavailable:
-		return 503 // Service Unavailable
+		return http.StatusServiceUnavailable // Service Unavailable
+	case CodeTimeout:
+		return http.StatusRequestTimeout
 	default:
-		return 500 // Default to Internal Server Error
+		return http.StatusInternalServerError // Default to Internal Server Error
 	}
 }

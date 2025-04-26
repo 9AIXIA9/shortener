@@ -16,7 +16,7 @@ import (
 	gomock "go.uber.org/mock/gomock"
 )
 
-// MockFilter is a mock of ShortUrlFilter interface.
+// MockFilter is a mock of Filter interface.
 type MockFilter struct {
 	ctrl     *gomock.Controller
 	recorder *MockFilterMockRecorder

@@ -20,16 +20,16 @@ func ShortenHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 
 		//参数校验
 		if err := validate.Check(r.Context(), &req); err != nil {
-			httpx.ErrorCtx(r.Context(), w, LogError(err))
+			ResponseError(w, err)
 			return
 		}
 
-		l := logic.NewShortenLogic(r.Context(), svcCtx, urlTool.NewClient())
+		l := logic.NewShortenLogic(r.Context(), svcCtx, urlTool.NewClient(svcCtx.Config.Connect))
 		resp, err := l.Shorten(&req)
 		if err != nil {
-			httpx.ErrorCtx(r.Context(), w, LogError(err))
+			ResponseError(w, err)
 		} else {
-			httpx.OkJsonCtx(r.Context(), w, resp)
+			ResponseSuccess(w, resp)
 		}
 	}
 }

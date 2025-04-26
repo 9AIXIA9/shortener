@@ -13,7 +13,7 @@ const (
 	logicErrorMsg    = "user business logic error"
 )
 
-func LogError(err error) error {
+func HandleError(err error) error {
 	var targetError *errorx.ErrorX
 
 	if errors.As(err, &targetError) {
@@ -24,7 +24,7 @@ func LogError(err error) error {
 			// 系统级错误使用通用消息
 			logx.Errorw(systemErrorMsg, logx.Field("err", targetError.Detail()))
 			return errorx.New(targetError.Code, getPublicErrorMessage(targetError.Code))
-		case errorx.CodeParamError, errorx.CodeNotFound, errorx.CodeServiceUnavailable:
+		case errorx.CodeParamError, errorx.CodeNotFound, errorx.CodeServiceUnavailable, errorx.CodeTimeout:
 			logx.Debugw(logicErrorMsg, logx.Field("msg", targetError.Msg))
 			return errorx.New(targetError.Code, targetError.Msg)
 		default:

@@ -4,8 +4,8 @@ import (
 	"net/url"
 )
 
-// GetUrlDomainAndPath 获取URL中的域名和基础路径
-func GetUrlDomainAndPath(URL string) (domain string, basePath string) {
+// GetDomainAndPath 获取URL中的域名和基础路径
+func GetDomainAndPath(URL string) (domain string, basePath string) {
 	if len(URL) == 0 {
 		return "", ""
 	}
@@ -16,11 +16,15 @@ func GetUrlDomainAndPath(URL string) (domain string, basePath string) {
 		return "", ""
 	}
 
-	if len(myUrl.Host) == 0 || len(myUrl.Path) == 0 {
+	if len(myUrl.Host) == 0 {
 		return "", ""
 	}
 
 	basePath = myUrl.Path
+	if len(basePath) == 0 {
+		return myUrl.Host, ""
+	}
+
 	if len(basePath) > 0 && basePath[0] == '/' {
 		basePath = basePath[1:]
 	}

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/zeromicro/go-zero/core/stores/cache"
 	"github.com/zeromicro/go-zero/rest"
+	"time"
 )
 
 type Config struct {
@@ -15,6 +16,7 @@ type Config struct {
 	CacheRedis     cache.CacheConf
 	ShortUrlFilter BloomFilterConf
 	Auth           AuthConf
+	Connect        ConnectConf
 }
 
 type AppConf struct {
@@ -45,8 +47,12 @@ type ShortUrlConf struct {
 type SequenceConf struct {
 	Mysql            MysqlConf
 	Redis            RedisConf
-	Threshold        int
-	BatchSize        uint64
+	RetryBackoff     time.Duration
+	MaxRetries       int
+	CachePatch       uint64
+	CacheThreshold   int
+	LocalPatch       uint64
+	LocalThreshold   int
 	KeySequenceID    string
 	KeySequenceState string
 }
@@ -60,6 +66,14 @@ type BloomFilterConf struct {
 type AuthConf struct {
 	AccessSecret string
 	AccessExpire int64
+}
+
+type ConnectConf struct {
+	DNSServer       string
+	Timeout         time.Duration
+	MaxRetries      int
+	MaxIdleConns    int
+	IdleConnTimeout time.Duration
 }
 
 func (db MysqlConf) DSN() string {
