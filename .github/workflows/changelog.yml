@@ -1,0 +1,33 @@
+# .github/workflows/changelog.yml
+name: Generate CHANGELOG
+on:
+  push:
+    tags:
+      - "v*"  # 匹配所有以 v 开头的标签（如 v1.0.0）
+
+permissions:
+  contents: write
+
+jobs:
+  generate-changelog:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout 代码
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 获取完整提交历史（否则无法生成日志）
+
+      - name: 安装 git-chglog
+        run: go install github.com/git-chglog/git-chglog/cmd/git-chglog@latest
+
+      - name: 生成 CHANGELOG
+        run: git-chglog --output CHANGELOG.md
+
+      - name: 提交 CHANGELOG
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          git add CHANGELOG.md
+          # 添加检查避免空提交
+          git diff --staged --quiet || git commit -m "chore(release): 自动更新 CHANGELOG.md"
+          git push
