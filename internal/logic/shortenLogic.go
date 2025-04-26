@@ -102,9 +102,7 @@ func (l *ShortenLogic) inShortUrlDomainPath(url string) bool {
 	if domain == l.svcCtx.Config.App.ShortUrlDomain {
 		// 处理配置路径可能带有前导斜杠的情况
 		configPath := l.svcCtx.Config.App.ShortUrlPath
-		if strings.HasPrefix(configPath, "/") {
-			configPath = configPath[1:] // 去掉前导斜杠
-		}
+		configPath = strings.TrimPrefix(configPath, "/")
 		return strings.HasPrefix(path, configPath)
 	}
 

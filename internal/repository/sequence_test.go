@@ -377,6 +377,7 @@ func TestSequence_ExternalCacheRecovery(t *testing.T) {
 	// 阶段1：外部缓存仍不可用，使用本地缓存
 	t.Run("外部缓存不可用时使用本地缓存", func(t *testing.T) {
 		err := localCache.FillIDs(context.Background(), []uint64{100})
+		assert.NoError(t, err)
 
 		id, err := seq.NextID(context.Background())
 
