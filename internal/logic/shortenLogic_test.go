@@ -13,6 +13,7 @@ import (
 	"shortener/pkg/errorx"
 	filterMock "shortener/pkg/filter/mock"
 	"shortener/pkg/md5"
+	sensitiveMock "shortener/pkg/sensitive/mock"
 	urlToolMock "shortener/pkg/urlTool/mock"
 	"testing"
 )
@@ -25,13 +26,13 @@ func TestShortenLogic_Shorten(t *testing.T) {
 	mockShortUrlMap := repositoryMock.NewMockShortUrlMap(ctrl)
 	mockSequence := repositoryMock.NewMockSequence(ctrl)
 	mockFilter := filterMock.NewMockFilter(ctrl)
+	mockSensitiveFilter := sensitiveMock.NewMockFilter(ctrl)
 	mockURLClient := urlToolMock.NewMockClient(ctrl)
 
 	// 创建配置
 	cfg := config.Config{
 		App: config.AppConf{
 			Operator:       "test_operator",
-			SensitiveWords: []string{"bad"},
 			ShortUrlDomain: "example.com",
 			ShortUrlPath:   "/short/",
 		},
@@ -42,7 +43,8 @@ func TestShortenLogic_Shorten(t *testing.T) {
 		Config:                cfg,
 		ShortUrlMapRepository: mockShortUrlMap,
 		SequenceRepository:    mockSequence,
-		Filter:                mockFilter,
+		ShortCodeFilter:       mockFilter,
+		SensitiveFilter:       mockSensitiveFilter,
 	}
 
 	// 测试场景一：无效URL
@@ -106,6 +108,9 @@ func TestShortenLogic_Shorten(t *testing.T) {
 		// 期望生成序列号并转为短链接
 		mockSequence.EXPECT().NextID(gomock.Any()).Return(uint64(12345), nil)
 
+		// 模拟敏感词检测，返回不包含敏感词
+		mockSensitiveFilter.EXPECT().ContainsBadWord(gomock.Any()).Return(false)
+
 		// 期望存储新的映射
 		mockShortUrlMap.EXPECT().Insert(gomock.Any(), gomock.Any()).Return(nil)
 
@@ -122,23 +127,6 @@ func TestShortenLogic_Shorten(t *testing.T) {
 
 	// 测试场景五：生成短链接时遇到敏感词
 	t.Run("sensitive_short_url", func(t *testing.T) {
-		sensitiveConfig := config.Config{
-			App: config.AppConf{
-				Operator: "test_operator",
-				// 使用包含0-9,a-z,A-Z的敏感词，确保任何生成的短链接都会触发敏感检测
-				SensitiveWords: []string{"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b"},
-				ShortUrlDomain: "example.com",
-				ShortUrlPath:   "/short/",
-			},
-		}
-
-		sensitiveSvcCtx := &svc.ServiceContext{
-			Config:                sensitiveConfig,
-			ShortUrlMapRepository: mockShortUrlMap,
-			SequenceRepository:    mockSequence,
-			Filter:                mockFilter,
-		}
-
 		longURL := "http://sensitive.com/page"
 		md5Hex, _ := md5.Sum([]byte(longURL))
 
@@ -148,9 +136,10 @@ func TestShortenLogic_Shorten(t *testing.T) {
 		// 模拟5次尝试都生成了包含敏感词的短链接
 		for i := 0; i < 5; i++ {
 			mockSequence.EXPECT().NextID(gomock.Any()).Return(uint64(i+1), nil)
+			mockSensitiveFilter.EXPECT().ContainsBadWord(gomock.Any()).Return(true)
 		}
 
-		l := NewShortenLogic(context.Background(), sensitiveSvcCtx, mockURLClient)
+		l := NewShortenLogic(context.Background(), svcCtx, mockURLClient)
 		resp, err := l.Shorten(&types.ShortenRequest{LongUrl: longURL})
 
 		assert.Nil(t, resp)
@@ -187,7 +176,7 @@ func TestShortenLogic_testConnectivity(t *testing.T) {
 	})
 }
 
-// 测试短���接检查函数
+// 测试短链接检查函数
 func TestShortenLogic_inShortUrlDomainPath(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -195,9 +184,8 @@ func TestShortenLogic_inShortUrlDomainPath(t *testing.T) {
 	cfg := config.Config{
 		App: config.AppConf{
 			Operator:       "test_operator",
-			SensitiveWords: []string{"bad"},
 			ShortUrlDomain: "example.com",
-			ShortUrlPath:   "/short/", // 修改为与业务代码一致的路径
+			ShortUrlPath:   "/short/", // 修改��与业务代码一致的路径
 		},
 	}
 
@@ -299,22 +287,39 @@ func TestShortenLogic_generateNonSensitiveShortUrl(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockSequence := repositoryMock.NewMockSequence(ctrl)
+	mockSensitiveFilter := sensitiveMock.NewMockFilter(ctrl)
 
 	// 正确初始化配置
 	cfg := config.Config{
-		App: config.AppConf{
-			SensitiveWords: []string{"bad", "evil"},
-		},
+		App: config.AppConf{},
 	}
 
 	svcCtx := &svc.ServiceContext{
 		Config:             cfg,
 		SequenceRepository: mockSequence,
+		SensitiveFilter:    mockSensitiveFilter,
 	}
 
 	t.Run("success", func(t *testing.T) {
 		// 设置正确的模拟调用预期
 		mockSequence.EXPECT().NextID(gomock.Any()).Return(uint64(12345), nil)
+		mockSensitiveFilter.EXPECT().ContainsBadWord(gomock.Any()).Return(false)
+
+		l := &ShortenLogic{ctx: context.Background(), svcCtx: svcCtx}
+		result, err := l.generateNonSensitiveShortUrl()
+
+		assert.Nil(t, err)
+		assert.NotEmpty(t, result)
+	})
+
+	t.Run("sensitive_word_detected", func(t *testing.T) {
+		// A sequence that would generate a sensitive short URL
+		mockSequence.EXPECT().NextID(gomock.Any()).Return(uint64(12345), nil)
+		mockSensitiveFilter.EXPECT().ContainsBadWord(gomock.Any()).Return(true)
+
+		// Try again with a different sequence
+		mockSequence.EXPECT().NextID(gomock.Any()).Return(uint64(67890), nil)
+		mockSensitiveFilter.EXPECT().ContainsBadWord(gomock.Any()).Return(false)
 
 		l := &ShortenLogic{ctx: context.Background(), svcCtx: svcCtx}
 		result, err := l.generateNonSensitiveShortUrl()
@@ -378,7 +383,7 @@ func TestShortenLogic_storeShortUrlInFilter(t *testing.T) {
 	mockFilter := filterMock.NewMockFilter(ctrl)
 
 	svcCtx := &svc.ServiceContext{
-		Filter: mockFilter,
+		ShortCodeFilter: mockFilter,
 	}
 
 	t.Run("success", func(t *testing.T) {
