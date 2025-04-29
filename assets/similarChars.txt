@@ -1,0 +1,17 @@
+# 近似词示例 similar.txt
+0=o
+1=i,l
+2=z
+3=e
+4=a
+5=s
+6=b
+7=t
+8=b
+9=g,q
+i=l
+l=i
+a=u
+u=a
+x=k
+k=x
