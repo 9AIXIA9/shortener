@@ -8,13 +8,21 @@ import (
 	"shortener/internal/repository/cachex"
 	"shortener/internal/repository/database"
 	"shortener/pkg/filter"
+	"shortener/pkg/sensitive"
+)
+
+const (
+	sensitiveWordsPath = "assets/sensitiveWords.txt"
+	replaceRulesPath   = "assets/replaceRules.txt"
+	similarCharsPath   = "assets/similarChars.txt"
 )
 
 type ServiceContext struct {
 	Config                config.Config
 	SequenceRepository    repository.Sequence
 	ShortUrlMapRepository repository.ShortUrlMap
-	Filter                filter.Filter
+	ShortCodeFilter       filter.Filter
+	SensitiveFilter       sensitive.Filter
 }
 
 func NewServiceContext(c config.Config) *ServiceContext {
@@ -62,6 +70,7 @@ func NewServiceContext(c config.Config) *ServiceContext {
 			localCache,
 			sequenceOpts,
 		),
-		Filter: filter.NewBloomFilter(c.ShortUrlFilter),
+		ShortCodeFilter: filter.NewBloomFilter(c.ShortUrlFilter),
+		SensitiveFilter: sensitive.NewFilter(sensitiveWordsPath, similarCharsPath, replaceRulesPath),
 	}
 }

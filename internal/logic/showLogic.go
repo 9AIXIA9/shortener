@@ -52,7 +52,7 @@ func (l *ShowLogic) Show(req *types.ShowRequest) (*types.ShowResponse, error) {
 
 // 查询原始长链接
 func (l *ShowLogic) filter(shortUrl string) (bool, error) {
-	exist, err := l.svcCtx.Filter.ExistsCtx(l.ctx, []byte(shortUrl))
+	exist, err := l.svcCtx.ShortCodeFilter.ExistsCtx(l.ctx, []byte(shortUrl))
 	if err != nil {
 		return false, errorx.Wrap(err, errorx.CodeSystemError, "fail to check if there is a shortURL through the filter")
 	}

@@ -1,0 +1,7 @@
+# 替代规则示例 replace.txt
+vv,w
+rn,m
+nn,m
+cl,d
+13,b
+12,r

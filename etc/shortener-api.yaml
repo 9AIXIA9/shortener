@@ -8,7 +8,6 @@ App:
   Operator: ${OPERATOR}
   ShortUrlDomain: ${SHORT_URL_DOMAIN}
   ShortUrlPath: ${SHORT_URL_PATH}
-  SensitiveWords: [ "xxx", "sex", "ass", "fuck", "evil" ]
 
 # shortUrl配置
 ShortUrlMap:
