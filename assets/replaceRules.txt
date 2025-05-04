@@ -1,7 +1,11 @@
 # 替代规则示例 replace.txt
-vv,w
-rn,m
-nn,m
-cl,d
-13,b
-12,r
+vv=w
+rn=m
+nn=m
+cl=d
+13=B
+12=R
+ph=f
+Ph=f
+pH=f
+PH=f

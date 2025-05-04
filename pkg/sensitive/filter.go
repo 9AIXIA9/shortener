@@ -1,4 +1,6 @@
-//go:generate mockgen -source=$GOFILE -destination=./mock/filter_mock.go -package=sensitive
+// Package sensitive 快速检测敏感词（只支持大小写字母及数字）
+//
+//go:generate m
 package sensitive
 
 import (
@@ -8,117 +10,216 @@ import (
 	"sort"
 	"strings"
 	"sync"
-	"unicode/utf8"
 )
 
 type Filter interface {
 	ContainsBadWord(input string) bool
 }
 
-type TrieNode struct {
-	children map[rune]*TrieNode
+const (
+	invalidChar = -1
+	charSetSize = 36 // 0-9 + a-z
+	ascllLen    = 256
+)
+
+type trieNode struct {
+	children [charSetSize]*trieNode
 	isEnd    bool
 }
 
-type filterBasedOnTrie struct {
-	root *TrieNode
-	// 形近字映射表
-	similarChars map[rune][]rune
-	// 替换规则结构（按长度降序排序）
-	replaceRules []struct {
-		from string
-		to   string
-	}
-	mu       sync.RWMutex
-	triePool sync.Pool
+type filter struct {
+	root         *trieNode
+	mu           sync.RWMutex
+	charIndex    [ascllLen]int // 字符快速索引
+	similarMap   map[rune]rune // 单字符替换映射
+	replaceRules []replaceRule // 多字符替换规则
+	nodePool     sync.Pool     // 节点对象池
+	bufferPool   sync.Pool     // 字符串处理缓冲池
 }
 
-func NewFilter(sensitiveWordsPath, similarCharsPath, replaceRulesPath string) Filter {
-	f := &filterBasedOnTrie{
-		root: &TrieNode{children: make(map[rune]*TrieNode)},
-		triePool: sync.Pool{
+type replaceRule struct {
+	from string
+	to   string
+}
+
+func NewFilter(sensitivePath, similarPath, replacePath string) Filter {
+	f := &filter{
+		root:       &trieNode{},
+		similarMap: make(map[rune]rune),
+		nodePool: sync.Pool{
 			New: func() interface{} {
-				return &TrieNode{children: make(map[rune]*TrieNode)}
+				return &trieNode{
+					children: [charSetSize]*trieNode{},
+					isEnd:    false,
+				}
 			},
 		},
-		similarChars: make(map[rune][]rune),
-		replaceRules: []struct {
-			from string
-			to   string
-		}{},
+		bufferPool: sync.Pool{
+			New: func() interface{} {
+				return new(strings.Builder)
+			},
+		},
 	}
 
-	// 从文件加载敏感词
-	if err := f.loadSensitiveWordsFromFile(sensitiveWordsPath); err != nil {
-		logx.Severef("failed to load sensitive words: %v", err)
+	// 初始化字符索引为无效值
+	for i := 0; i < 256; i++ {
+		f.charIndex[i] = invalidChar
 	}
 
-	// 从文件加载形近字映射
-	if err := f.loadSimilarChars(similarCharsPath); err != nil {
-		logx.Severef("failed to load the geomorphic mapping: %v", err)
+	// 设置有效字符索引
+	for c := '0'; c <= '9'; c++ {
+		f.charIndex[c] = int(c - '0')
+	}
+	for c := 'a'; c <= 'z'; c++ {
+		f.charIndex[c] = 10 + int(c-'a')
 	}
 
-	// 从文件加载替换规则
-	if err := f.loadReplaceRules(replaceRulesPath); err != nil {
-		logx.Severef("failed to load the substitution rule: %v", err)
+	// 加载配置文件
+	err := f.loadSimilarMap(similarPath)
+	if err != nil && similarPath != "" {
+		logx.Severef("Failed to load similar chars: %v", err)
 	}
 
-	// 预排序替换规则
-	sort.Slice(f.replaceRules, func(i, j int) bool {
-		return len(f.replaceRules[i].from) > len(f.replaceRules[j].from)
-	})
+	err = f.loadReplaceRules(replacePath)
+	if err != nil && replacePath != "" {
+		logx.Severef("Failed to load replace rules: %v", err)
+	}
+
+	err = f.loadSensitiveWords(sensitivePath)
+	if err != nil && sensitivePath != "" {
+		logx.Severef("Failed to load sensitive words: %v", err)
+	}
+
+	// 预处理多字符替换规则
+	f.preprocessReplaceRules()
 
 	return f
 }
 
-func (f *filterBasedOnTrie) ContainsBadWord(input string) bool {
+// 预处理替换规则，应用单字符规范化
+func (f *filter) preprocessReplaceRules() {
+	processedRules := make([]replaceRule, 0, len(f.replaceRules))
+
+	// 1. 先进行单字符规范化
+	for _, rule := range f.replaceRules {
+		from := f.normalizeSingleChars(rule.from)
+		to := f.normalizeSingleChars(rule.to)
+		processedRules = append(processedRules, replaceRule{
+			from: from,
+			to:   to,
+		})
+	}
+
+	// 2. 按规范化后的from长度降序排序
+	sort.Slice(processedRules, func(i, j int) bool {
+		return len(processedRules[i].from) > len(processedRules[j].from)
+	})
+
+	f.replaceRules = processedRules
+}
+
+func (f *filter) ContainsBadWord(input string) bool {
+	if len(input) < 2 {
+		return false
+	}
+
+	processed := f.preprocessText(input)
+	if len(processed) == 0 {
+		return false
+	}
+
 	f.mu.RLock()
 	defer f.mu.RUnlock()
 
-	processed := f.unifyWords(input)
-	current := f.root
-
-	for i := 0; i < len(processed); {
-		r, size := utf8.DecodeRuneInString(processed[i:])
-		found := false
-
-		for testR := range current.children {
-			if r == testR || f.isSimilar(r, testR) {
-				current = current.children[testR]
-				if current.isEnd {
-					return true
-				}
-				found = true
+	// 高效Trie匹配
+	for i := 0; i < len(processed); i++ {
+		current := f.root
+		for j := i; j < len(processed); j++ {
+			c := processed[j]
+			idx := f.charIndex[c]
+			if idx == invalidChar || current.children[idx] == nil {
 				break
 			}
+			current = current.children[idx]
+			if current.isEnd {
+				return true
+			}
 		}
-
-		if !found {
-			current = f.root
-		}
-		i += size
 	}
 	return false
 }
 
-// loadSimilarChars 从文件加载形近字映射
-func (f *filterBasedOnTrie) loadSimilarChars(filePath string) error {
-	file, err := os.Open(filePath)
+// 高效处理单个形近字
+func (f *filter) normalizeSingleChars(s string) string {
+	if len(s) == 0 {
+		return s
+	}
+
+	// 从对象池获取 builder
+	builder := f.bufferPool.Get().(*strings.Builder)
+	builder.Reset()
+	defer f.bufferPool.Put(builder)
+
+	for _, c := range s {
+		if similar, ok := f.similarMap[c]; ok {
+			builder.WriteRune(similar)
+		} else {
+			builder.WriteRune(c)
+		}
+	}
+	return builder.String()
+}
+
+// 处理多形近字替换和小写转换
+func (f *filter) normalizeText(s string) string {
+	result := s
+	for _, rule := range f.replaceRules {
+		result = strings.ReplaceAll(result, rule.from, rule.to)
+	}
+	return strings.ToLower(result) // 确保最后统一转小写
+}
+
+// 整合所有字符处理过程
+func (f *filter) preprocessText(s string) string {
+	// 1. 先过滤非法字符
+	cleaned := f.filterInvalidChars(s)
+
+	// 2. 单字符替换
+	normalized := f.normalizeSingleChars(cleaned)
+
+	// 3. 多字符替换
+	return f.normalizeText(normalized)
+}
+
+func (f *filter) filterInvalidChars(s string) string {
+	builder := f.bufferPool.Get().(*strings.Builder)
+	defer f.bufferPool.Put(builder)
+	builder.Reset()
+
+	for _, c := range strings.ToLower(s) {
+		if ('0' <= c && c <= '9') || ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') {
+			builder.WriteRune(c)
+		}
+	}
+	return builder.String()
+}
+
+// 文件加载逻辑
+func (f *filter) loadSimilarMap(path string) error {
+	if path == "" {
+		return nil
+	}
+
+	file, err := os.Open(path)
 	if err != nil {
 		return err
 	}
-	defer func() {
-		if err := file.Close(); err != nil {
-			logx.Errorf("load similar chars close file failed,err:%v", err)
-		}
-	}()
-
-	// 创建新的映射表
-	newSimilarChars := make(map[rune][]rune)
+	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
+		line = strings.ReplaceAll(line, " ", "") // 移除所有空格
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue
 		}
@@ -128,185 +229,100 @@ func (f *filterBasedOnTrie) loadSimilarChars(filePath string) error {
 			continue
 		}
 
-		if len([]rune(parts[0])) != 1 {
-			continue
+		// 统一转换为小写处理
+		key := strings.ToLower(strings.TrimSpace(parts[0]))
+		value := strings.ToLower(strings.TrimSpace(parts[1])) // 直接获取等号右侧值
+
+		if len(key) != 1 || len(value) != 1 {
+			continue // 跳过无效行
 		}
 
-		char := []rune(parts[0])[0]
-		var similarList []rune
-		for _, s := range strings.Split(parts[1], ",") {
-			s = strings.TrimSpace(s)
-			if len([]rune(s)) == 1 {
-				similarList = append(similarList, []rune(s)[0])
-			}
-		}
-
-		if len(similarList) > 0 {
-			newSimilarChars[char] = similarList
-		}
+		// 映射关系：原始字符 → 目标字符
+		f.similarMap[rune(key[0])] = rune(value[0])
 	}
-
-	if err := scanner.Err(); err != nil {
-		return err
-	}
-
-	// 只有成功读取文件后才替换全局变量
-	if len(newSimilarChars) > 0 {
-		f.similarChars = newSimilarChars
-	}
-
-	return nil
+	return scanner.Err()
 }
 
-// loadReplaceRules 从文件加载替换规则
-func (f *filterBasedOnTrie) loadReplaceRules(filePath string) error {
-	file, err := os.Open(filePath)
+func (f *filter) loadReplaceRules(path string) error {
+	if path == "" {
+		return nil
+	}
+
+	file, err := os.Open(path)
 	if err != nil {
 		return err
 	}
-	defer func() {
-		if err := file.Close(); err != nil {
-			logx.Errorf("load replace rules close file failed,err:%v", err)
-		}
-	}()
+	defer file.Close()
 
-	var newReplaceRules []struct {
-		from string
-		to   string
-	}
-
+	var rules []replaceRule
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
+		line = strings.ReplaceAll(line, " ", "") // 移除空格
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue
 		}
 
-		parts := strings.Split(line, ",")
-		if len(parts) != 2 {
-			continue
-		}
-
-		from := strings.TrimSpace(parts[0])
-		to := strings.TrimSpace(parts[1])
-		if from != "" && to != "" {
-			newReplaceRules = append(newReplaceRules, struct {
-				from string
-				to   string
-			}{
-				from: from,
-				to:   to,
+		parts := strings.Split(line, "=")
+		if len(parts) == 2 {
+			rules = append(rules, replaceRule{
+				from: strings.TrimSpace(parts[0]),
+				to:   strings.TrimSpace(parts[1]),
 			})
 		}
 	}
 
-	if err := scanner.Err(); err != nil {
-		return err
-	}
+	// 添加这行代码，将解析的规则赋值给实例字段
+	f.replaceRules = rules
 
-	// 只有成功读取文件后才替换全局变量
-	if len(newReplaceRules) > 0 {
-		f.replaceRules = newReplaceRules
-	}
-
-	return nil
+	return scanner.Err()
 }
 
-func (f *filterBasedOnTrie) loadSensitiveWordsFromFile(filePath string) error {
-	file, err := os.Open(filePath)
+func (f *filter) loadSensitiveWords(path string) error {
+	if path == "" {
+		return nil
+	}
+
+	file, err := os.Open(path)
 	if err != nil {
 		return err
 	}
-	defer func() {
-		if err := file.Close(); err != nil {
-			logx.Errorf("load sensitivie words close file failed,err:%v", err)
-		}
-	}()
+	defer file.Close()
 
-	scanner := bufio.NewScanner(file)
 	var words []string
+	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		if line := strings.TrimSpace(scanner.Text()); line != "" && !strings.HasPrefix(line, "#") {
 			words = append(words, line)
 		}
 	}
 
-	f.addBadWords(words...)
-	return scanner.Err()
-}
-
-func (f *filterBasedOnTrie) addBadWords(words ...string) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
 	for _, word := range words {
-		processed := f.unifyWords(word)
-		if processed != "" {
-			f.insertWithVariants(processed)
-		}
-	}
-}
-
-func (f *filterBasedOnTrie) insertWithVariants(word string) {
-	runes := []rune(word)
-	queue := []struct {
-		node  *TrieNode
-		index int
-	}{{f.root, 0}}
-
-	for len(queue) > 0 {
-		current := queue[0]
-		queue = queue[1:]
-
-		if current.index == len(runes) {
-			current.node.isEnd = true
+		processed := f.preprocessText(word)
+		if len(processed) == 0 {
 			continue
 		}
 
-		char := runes[current.index]
-		similar := f.getSimilarChars(char)
-
-		for _, c := range similar {
-			if current.node.children[c] == nil {
-				current.node.children[c] = f.triePool.Get().(*TrieNode)
+		current := f.root
+		for _, c := range processed {
+			idx := f.charIndex[c]
+			if idx == invalidChar {
+				continue
 			}
-			queue = append(queue, struct {
-				node  *TrieNode
-				index int
-			}{current.node.children[c], current.index + 1})
-		}
-	}
-}
 
-// unifyWords 统一化处理单词
-func (f *filterBasedOnTrie) unifyWords(word string) string {
-	word = strings.ToLower(word)
-	for _, rule := range f.replaceRules {
-		word = strings.ReplaceAll(word, rule.from, rule.to)
-	}
-	return word
-}
-
-func (f *filterBasedOnTrie) getSimilarChars(r rune) []rune {
-	chars := []rune{r}
-	if similar, ok := f.similarChars[r]; ok {
-		chars = append(chars, similar...)
-	}
-	return chars
-}
-
-func (f *filterBasedOnTrie) isSimilar(a, b rune) bool {
-	if a == b {
-		return true
-	}
-
-	// 检查Trie节点的字符（b）的形近字是否包含输入字符（a）
-	if similar, ok := f.similarChars[b]; ok {
-		for _, c := range similar {
-			if c == a {
-				return true
+			if current.children[idx] == nil {
+				// 获取或创建新节点
+				node := f.nodePool.Get().(*trieNode)
+				// 重置节点状态
+				*node = trieNode{} // 结构体零值重置
+				current.children[idx] = node
 			}
+			current = current.children[idx]
 		}
+		current.isEnd = true
 	}
-	return false
+	return scanner.Err()
 }
