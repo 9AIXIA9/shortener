@@ -105,7 +105,10 @@ func BenchmarkLoadSensitiveWords(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		f := NewFilter("", "", "")
-		f.(*filter).loadSensitiveWords(wordFile)
+		err := f.(*filter).loadSensitiveWords(wordFile)
+		if err != nil {
+			panic(err)
+		}
 	}
 }
 

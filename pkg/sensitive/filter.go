@@ -1,5 +1,6 @@
 // Package sensitive 快速检测敏感词（只支持大小写字母及数字）
 //
+//go:generat
 //go:generate m
 package sensitive
 
@@ -23,7 +24,8 @@ const (
 )
 
 type trieNode struct {
-	children [charSetSize]*trieNode
+	children *[charSetSize]*trieNode // 0-9: 数字(0-9), 10-35: 字母(a-z)
+	mask     uint64                  //用于校验子树是否存在的掩码 1 存在 0 不存在
 	isEnd    bool
 }
 
@@ -44,12 +46,16 @@ type replaceRule struct {
 
 func NewFilter(sensitivePath, similarPath, replacePath string) Filter {
 	f := &filter{
-		root:       &trieNode{},
+		root: &trieNode{
+			children: &[charSetSize]*trieNode{},
+			mask:     0, // 初始化 mask
+			isEnd:    false,
+		},
 		similarMap: make(map[rune]rune),
 		nodePool: sync.Pool{
 			New: func() interface{} {
 				return &trieNode{
-					children: [charSetSize]*trieNode{},
+					children: &[charSetSize]*trieNode{},
 					isEnd:    false,
 				}
 			},
@@ -131,15 +137,21 @@ func (f *filter) ContainsBadWord(input string) bool {
 	f.mu.RLock()
 	defer f.mu.RUnlock()
 
-	// 高效Trie匹配
+	// 高效 Trie 匹配
 	for i := 0; i < len(processed); i++ {
 		current := f.root
 		for j := i; j < len(processed); j++ {
 			c := processed[j]
 			idx := f.charIndex[c]
-			if idx == invalidChar || current.children[idx] == nil {
+			if idx == invalidChar {
 				break
 			}
+
+			// 先检查 mask 位，避免访问 children 数组
+			if (current.mask & (1 << idx)) == 0 {
+				break // 子节点不存在
+			}
+
 			current = current.children[idx]
 			if current.isEnd {
 				return true
@@ -187,7 +199,7 @@ func (f *filter) preprocessText(s string) string {
 	// 2. 单字符替换
 	normalized := f.normalizeSingleChars(cleaned)
 
-	// 3. 多字符替换
+	// 3. 多字符替换并转小写
 	return f.normalizeText(normalized)
 }
 
@@ -196,7 +208,7 @@ func (f *filter) filterInvalidChars(s string) string {
 	defer f.bufferPool.Put(builder)
 	builder.Reset()
 
-	for _, c := range strings.ToLower(s) {
+	for _, c := range s {
 		if ('0' <= c && c <= '9') || ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') {
 			builder.WriteRune(c)
 		}
@@ -230,8 +242,8 @@ func (f *filter) loadSimilarMap(path string) error {
 		}
 
 		// 统一转换为小写处理
-		key := strings.ToLower(strings.TrimSpace(parts[0]))
-		value := strings.ToLower(strings.TrimSpace(parts[1])) // 直接获取等号右侧值
+		key := strings.TrimSpace(parts[0])
+		value := strings.TrimSpace(parts[1]) // 直接获取等号右侧值
 
 		if len(key) != 1 || len(value) != 1 {
 			continue // 跳过无效行
@@ -272,7 +284,6 @@ func (f *filter) loadReplaceRules(path string) error {
 		}
 	}
 
-	// 添加这行代码，将解析的规则赋值给实例字段
 	f.replaceRules = rules
 
 	return scanner.Err()
@@ -313,12 +324,18 @@ func (f *filter) loadSensitiveWords(path string) error {
 				continue
 			}
 
-			if current.children[idx] == nil {
-				// 获取或创建新节点
+			// 使用 mask 位判断子节点是否存在
+			if (current.mask & (1 << idx)) == 0 {
+				// 子节点不存在，获取或创建新节点
 				node := f.nodePool.Get().(*trieNode)
-				// 重置节点状态
-				*node = trieNode{} // 结构体零值重置
+				*node = trieNode{
+					children: &[charSetSize]*trieNode{},
+					mask:     0,
+					isEnd:    false,
+				}
 				current.children[idx] = node
+				// 设置 mask 位标记子节点存在
+				current.mask |= 1 << idx
 			}
 			current = current.children[idx]
 		}

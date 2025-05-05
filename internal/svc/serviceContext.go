@@ -13,8 +13,8 @@ import (
 
 const (
 	sensitiveWordsPath = "assets/sensitiveWords.txt"
-	replaceRulesPath   = "assets/replaceRules.txt"
 	similarCharsPath   = "assets/similarChars.txt"
+	replaceRulesPath   = "assets/replaceRules.txt"
 )
 
 type ServiceContext struct {
