@@ -146,7 +146,7 @@ func TestFilter_PreprocessFlow(t *testing.T) {
 
 	// 创建必要的规则文件
 	similarFile := "1=i\nv=u"
-	replaceFile := "vv=w\nph=f"
+	replaceFile := "vv=w\nPh=f"
 
 	testCases := []struct {
 		name   string
@@ -227,7 +227,10 @@ func TestFilter_Concurrency(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		for i := 0; i < 1000; i++ {
-			f.(*filter).loadSensitiveWords(createTestFile("concurrent"))
+			err := f.(*filter).loadSensitiveWords(createTestFile("concurrent"))
+			if err != nil {
+				panic(err)
+			}
 		}
 	}()
 
