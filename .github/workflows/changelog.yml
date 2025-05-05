@@ -3,7 +3,7 @@ name: Generate CHANGELOG
 on:
   push:
     tags:
-      - "v*"  # 匹配所有以 v 开头的标签（如 v1.0.0）
+      - "v*"
 
 permissions:
   contents: write
@@ -15,19 +15,44 @@ jobs:
       - name: Checkout 代码
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # 获取完整提交历史（否则无法生成日志）
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 设置 Go 环境
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.1'  # 统一与 test.yml 中的 Go 版本格式
+
+      - name: Go 缓存
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
 
       - name: 安装 git-chglog
-        run: go install github.com/git-chglog/git-chglog/cmd/git-chglog@latest
+        run: |
+          go install github.com/git-chglog/git-chglog/cmd/git-chglog@latest
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
 
       - name: 生成 CHANGELOG
-        run: git-chglog --output CHANGELOG.md
+        run: git-chglog --output CHANGELOG.md --next-tag ${{ github.ref_name }}
 
       - name: 提交 CHANGELOG
         run: |
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
           git add CHANGELOG.md
-          # 添加检查避免空提交
-          git diff --staged --quiet || git commit -m "chore(release): 自动更新 CHANGELOG.md"
-          git push
+          
+          # 严格检查变更
+          if git diff --staged --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "chore(release): 自动更新 CHANGELOG.md"
+            git pull --rebase  # 解决可能的冲突
+            git push
+          fi
+
