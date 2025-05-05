@@ -29,7 +29,7 @@ func TestShowLogic_Show(t *testing.T) {
 	svcCtx := &svc.ServiceContext{
 		Config:                cfg,
 		ShortUrlMapRepository: mockShortUrlMap,
-		Filter:                mockFilter,
+		ShortCodeFilter:       mockFilter,
 	}
 
 	// 测试场景一：短链接不存在于过滤器中
@@ -128,7 +128,7 @@ func TestShowLogic_filter(t *testing.T) {
 	mockFilter := filterMock.NewMockFilter(ctrl)
 
 	svcCtx := &svc.ServiceContext{
-		Filter: mockFilter,
+		ShortCodeFilter: mockFilter,
 	}
 
 	t.Run("exists", func(t *testing.T) {

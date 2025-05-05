@@ -9,7 +9,6 @@ import (
 	"shortener/pkg/base62"
 	"shortener/pkg/errorx"
 	"shortener/pkg/md5"
-	"shortener/pkg/sensitive"
 	"shortener/pkg/urlTool"
 	"strings"
 )
@@ -147,7 +146,7 @@ func (l *ShortenLogic) generateNonSensitiveShortUrl() (string, error) {
 		url := base62.Convert(id)
 
 		// 检查敏感词
-		if !sensitive.Exist(l.svcCtx.Config.App.SensitiveWords, url) {
+		if !l.svcCtx.SensitiveFilter.ContainsBadWord(url) {
 			return url, nil
 		}
 		logx.Infof("skipping ID %d, generated short link contains sensitive words: %s", id, url)
@@ -176,7 +175,7 @@ func (l *ShortenLogic) storeInRepository(md5 string, longUrl, shortUrl string) e
 
 // 添加到过滤器中
 func (l *ShortenLogic) storeShortUrlInFilter(shortUrl string) error {
-	err := l.svcCtx.Filter.AddCtx(l.ctx, []byte(shortUrl))
+	err := l.svcCtx.ShortCodeFilter.AddCtx(l.ctx, []byte(shortUrl))
 	if err != nil {
 		return errorx.Wrap(err, errorx.CodeSystemError, "fail to store shortUrl in filter")
 	}

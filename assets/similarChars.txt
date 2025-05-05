@@ -1,0 +1,17 @@
+# 相似字符映射示例文件 similarChars.txt
+0=o
+O=o
+1=i
+I=i
+l=i
+2=z
+Z=z
+3=e
+4=A
+5=s
+S=s
+6=b
+7=t
+T=t
+8=B
+9=q

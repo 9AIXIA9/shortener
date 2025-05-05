@@ -21,7 +21,6 @@ type Config struct {
 
 type AppConf struct {
 	Operator       string
-	SensitiveWords []string
 	ShortUrlDomain string
 	ShortUrlPath   string
 }
