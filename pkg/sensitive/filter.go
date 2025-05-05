@@ -1,7 +1,7 @@
 // Package sensitive 快速检测敏感词（只支持大小写字母及数字）
 //
-//go:generat
-//go:generate m
+//go:generate mockgen -source=$GOFILE -destination=./mock/filter_mock.go -package=sensit
+//go:generate mockgen -source=$GOFILE -destination=./mock/filter_mock.go -package=sensitive
 package sensitive
 
 import (
@@ -57,6 +57,7 @@ func NewFilter(sensitivePath, similarPath, replacePath string) Filter {
 				return &trieNode{
 					children: &[charSetSize]*trieNode{},
 					isEnd:    false,
+					mask:     0,
 				}
 			},
 		},
