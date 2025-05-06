@@ -1,12 +1,14 @@
 package svc
 
 import (
+	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/core/stores/redis"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 	"shortener/internal/config"
 	"shortener/internal/repository"
 	"shortener/internal/repository/cachex"
 	"shortener/internal/repository/database"
+	"shortener/pkg/errorx"
 	"shortener/pkg/filter"
 	"shortener/pkg/sensitive"
 )
@@ -37,7 +39,13 @@ func NewServiceContext(c config.Config) *ServiceContext {
 	}
 	sequenceRedis, err := redis.NewRedis(redisConf)
 	if err != nil {
-		panic(err)
+		err = errorx.NewWithCause(errorx.CodeDatabaseError, "connect to redis failed", err)
+		logx.Severef("init service context failed,err:%v", err)
+	}
+
+	f, err := sensitive.NewFilter(sensitiveWordsPath, similarCharsPath, replaceRulesPath)
+	if err != nil {
+		logx.Severef("init service context failed,err:%v", err)
 	}
 
 	// 创建数据库访问层
@@ -71,6 +79,6 @@ func NewServiceContext(c config.Config) *ServiceContext {
 			sequenceOpts,
 		),
 		ShortCodeFilter: filter.NewBloomFilter(c.ShortUrlFilter),
-		SensitiveFilter: sensitive.NewFilter(sensitiveWordsPath, similarCharsPath, replaceRulesPath),
+		SensitiveFilter: f,
 	}
 }
