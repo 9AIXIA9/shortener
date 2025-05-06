@@ -22,6 +22,7 @@ const (
 	CodeNotFound
 	CodeTimeout
 	CodeServiceUnavailable
+	CodeTooFrequent
 )
 
 // ToHTTPStatus maps an application error code to the appropriate HTTP status code.
@@ -46,6 +47,8 @@ func ToHTTPStatus(code Code) int {
 		return http.StatusServiceUnavailable // Service Unavailable
 	case CodeTimeout:
 		return http.StatusRequestTimeout
+	case CodeTooFrequent:
+		return http.StatusTooManyRequests
 	default:
 		return http.StatusInternalServerError // Default to Internal Server Error
 	}

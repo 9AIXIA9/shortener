@@ -1,8 +1,9 @@
 package cachex
 
+//goland:noinspection ALL
 import (
 	"context"
-	"shortener/pkg/errorx"
+	"shortener/internal/types/errorx"
 	"sync"
 )
 

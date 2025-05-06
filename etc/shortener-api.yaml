@@ -59,9 +59,20 @@ Auth:
   AccessSecret: ${ACCESS_SECRET}
   AccessExpire: 86400
 
+# 连接配置
 Connect:
   DNSServer: ${CONNECT_DNS_SERVER}
   Timeout: ${CONNECT_TIMEOUT}
   MaxRetries: ${CONNECT_MAX_RETRIES}
   MaxIdleConns: ${CONNECT_MAX_IDLE_CONNS}
-  IdleConnTimeout : ${CONNECT_IDLE_CONN_TIMEOUT}
+  IdleConnTimeout: ${CONNECT_IDLE_CONN_TIMEOUT}
+
+# 限流配置
+Limit:
+  Redis:
+    Addr: ${LIMIT_REDIS_HOST}:${LIMIT_REDIS_PORT}
+    Password: ${LIMIT_REDIS_PASSWORD}
+    Type: ${LIMIT_REDIS_TYPE}
+  Rate: ${LIMIT_RATE}
+  Burst: ${LIMIT_BURST}
+  Key: ${LIMIT_KEY}

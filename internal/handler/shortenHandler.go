@@ -6,6 +6,7 @@ import (
 	"shortener/internal/logic"
 	"shortener/internal/svc"
 	"shortener/internal/types"
+	"shortener/internal/types/format"
 	"shortener/pkg/urlTool"
 	"shortener/pkg/validate"
 )
@@ -20,16 +21,16 @@ func ShortenHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 
 		//参数校验
 		if err := validate.Check(r.Context(), &req); err != nil {
-			ResponseError(w, err)
+			format.ResponseError(w, err)
 			return
 		}
 
 		l := logic.NewShortenLogic(r.Context(), svcCtx, urlTool.NewClient(svcCtx.Config.Connect))
 		resp, err := l.Shorten(&req)
 		if err != nil {
-			ResponseError(w, err)
+			format.ResponseError(w, err)
 		} else {
-			ResponseSuccess(w, resp)
+			format.ResponseSuccess(w, resp)
 		}
 	}
 }

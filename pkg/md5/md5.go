@@ -3,7 +3,7 @@ package md5
 import (
 	"crypto/md5"
 	"encoding/hex"
-	"shortener/pkg/errorx"
+	"shortener/internal/types/errorx"
 )
 
 // Sum 对传入参数求MD5值

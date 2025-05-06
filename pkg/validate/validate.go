@@ -3,7 +3,7 @@ package validate
 import (
 	"context"
 	"github.com/go-playground/validator/v10"
-	"shortener/pkg/errorx"
+	"shortener/internal/types/errorx"
 	"sync"
 )
 

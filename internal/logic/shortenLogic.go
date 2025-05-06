@@ -6,8 +6,8 @@ import (
 	"shortener/internal/model"
 	"shortener/internal/svc"
 	"shortener/internal/types"
+	"shortener/internal/types/errorx"
 	"shortener/pkg/base62"
-	"shortener/pkg/errorx"
 	"shortener/pkg/md5"
 	"shortener/pkg/urlTool"
 	"strings"
@@ -76,7 +76,7 @@ func (l *ShortenLogic) Shorten(req *types.ShortenRequest) (*types.ShortenRespons
 
 		//返回响应
 		return &types.ShortenResponse{
-			ShortUrl: l.getFullShortLink(shortUrl),
+			ShortCode: l.getFullShortLink(shortUrl),
 		}, nil
 	}
 
@@ -85,7 +85,7 @@ func (l *ShortenLogic) Shorten(req *types.ShortenRequest) (*types.ShortenRespons
 	}
 
 	if len(shortUrl) != 0 {
-		return &types.ShortenResponse{ShortUrl: l.getFullShortLink(shortUrl)}, nil
+		return &types.ShortenResponse{ShortCode: l.getFullShortLink(shortUrl)}, nil
 	}
 
 	return nil, errorx.New(errorx.CodeDatabaseError, "shortUrl is empty")

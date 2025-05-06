@@ -17,6 +17,7 @@ type Config struct {
 	ShortUrlFilter BloomFilterConf
 	Auth           AuthConf
 	Connect        ConnectConf
+	Limit          LimitConf
 }
 
 type AppConf struct {
@@ -73,6 +74,13 @@ type ConnectConf struct {
 	MaxRetries      int
 	MaxIdleConns    int
 	IdleConnTimeout time.Duration
+}
+
+type LimitConf struct {
+	Redis RedisConf
+	Rate  int
+	Burst int
+	Key   string
 }
 
 func (db MysqlConf) DSN() string {

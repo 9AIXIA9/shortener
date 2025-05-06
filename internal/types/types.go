@@ -3,18 +3,19 @@
 
 package types
 
+type ResolveRequest struct {
+	ShortCode string `path:"short_code" validate:"required,validShortUrl"`
+}
+
+type ResolveResponse struct {
+	OriginalUrl string `json:"original_url"`
+	ExpiresAt   string `json:"expires_at,optional"`
+}
+
 type ShortenRequest struct {
 	LongUrl string `json:"long_url" validate:"required,max=2048,validLongUrl"`
 }
 
 type ShortenResponse struct {
-	ShortUrl string `json:"short_url"`
-}
-
-type ShowRequest struct {
-	ShortUrl string `path:"short_url" validate:"required,validShortUrl"`
-}
-
-type ShowResponse struct {
-	LongUrl string `json:"long_url"`
+	ShortCode string `json:"short_code"`
 }

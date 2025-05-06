@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"shortener/internal/repository/cachex"
+	"shortener/internal/types/errorx"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -13,7 +14,6 @@ import (
 	"go.uber.org/mock/gomock"
 	cachexMock "shortener/internal/repository/cachex/mock"
 	databaseMock "shortener/internal/repository/database/mock"
-	"shortener/pkg/errorx"
 )
 
 func TestSequence_NextID(t *testing.T) {
