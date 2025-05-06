@@ -29,9 +29,7 @@ type ServiceContext struct {
 	ShortCodeFilter       filter.Filter
 	SensitiveFilter       sensitive.Filter
 
-	Timeout rest.Middleware
-	Limit   rest.Middleware
-	Error   rest.Middleware
+	Limit rest.Middleware
 }
 
 func NewServiceContext(c config.Config) *ServiceContext {
