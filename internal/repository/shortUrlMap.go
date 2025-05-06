@@ -8,7 +8,7 @@ import (
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 	"shortener/internal/config"
 	"shortener/internal/model"
-	"shortener/pkg/errorx"
+	"shortener/internal/types/errorx"
 )
 
 // ShortUrlMap 定义短URL映射接口

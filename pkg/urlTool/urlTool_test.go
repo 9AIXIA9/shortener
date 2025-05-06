@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"shortener/internal/config"
-	"shortener/pkg/errorx"
+	"shortener/internal/types/errorx"
 	"testing"
 	"time"
 

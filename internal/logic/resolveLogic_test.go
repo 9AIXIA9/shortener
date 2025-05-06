@@ -9,12 +9,12 @@ import (
 	repositoryMock "shortener/internal/repository/mock"
 	"shortener/internal/svc"
 	"shortener/internal/types"
-	"shortener/pkg/errorx"
+	"shortener/internal/types/errorx"
 	filterMock "shortener/pkg/filter/mock"
 	"testing"
 )
 
-func TestShowLogic_Show(t *testing.T) {
+func TestResolveLogic_Resolve(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -39,8 +39,8 @@ func TestShowLogic_Show(t *testing.T) {
 		// 设置过滤器返回不存在
 		mockFilter.EXPECT().ExistsCtx(gomock.Any(), []byte(shortURL)).Return(false, nil)
 
-		l := NewShowLogic(context.Background(), svcCtx)
-		resp, err := l.Show(&types.ShowRequest{ShortUrl: shortURL})
+		l := NewResolveLogic(context.Background(), svcCtx)
+		resp, err := l.Resolve(&types.ResolveRequest{ShortCode: shortURL})
 
 		assert.Nil(t, resp)
 		assert.NotNil(t, err)
@@ -54,8 +54,8 @@ func TestShowLogic_Show(t *testing.T) {
 		// 设置过滤器返回错误
 		mockFilter.EXPECT().ExistsCtx(gomock.Any(), []byte(shortURL)).Return(false, errorx.New(errorx.CodeSystemError, "filter error"))
 
-		l := NewShowLogic(context.Background(), svcCtx)
-		resp, err := l.Show(&types.ShowRequest{ShortUrl: shortURL})
+		l := NewResolveLogic(context.Background(), svcCtx)
+		resp, err := l.Resolve(&types.ResolveRequest{ShortCode: shortURL})
 
 		assert.Nil(t, resp)
 		assert.NotNil(t, err)
@@ -72,8 +72,8 @@ func TestShowLogic_Show(t *testing.T) {
 		// 设置数据库查询返回错误
 		mockShortUrlMap.EXPECT().FindOneByShortUrl(gomock.Any(), shortURL).Return(nil, errorx.New(errorx.CodeSystemError, "database error"))
 
-		l := NewShowLogic(context.Background(), svcCtx)
-		resp, err := l.Show(&types.ShowRequest{ShortUrl: shortURL})
+		l := NewResolveLogic(context.Background(), svcCtx)
+		resp, err := l.Resolve(&types.ResolveRequest{ShortCode: shortURL})
 
 		assert.Nil(t, resp)
 		assert.NotNil(t, err)
@@ -93,12 +93,12 @@ func TestShowLogic_Show(t *testing.T) {
 			LongUrl:  longURL,
 		}, nil)
 
-		l := NewShowLogic(context.Background(), svcCtx)
-		resp, err := l.Show(&types.ShowRequest{ShortUrl: shortURL})
+		l := NewResolveLogic(context.Background(), svcCtx)
+		resp, err := l.Resolve(&types.ResolveRequest{ShortCode: shortURL})
 
 		assert.Nil(t, err)
 		assert.NotNil(t, resp)
-		assert.Equal(t, longURL, resp.LongUrl)
+		assert.Equal(t, longURL, resp.OriginalUrl)
 	})
 
 	// 测试场景五：短链接在数据库中查询不到
@@ -111,8 +111,8 @@ func TestShowLogic_Show(t *testing.T) {
 		// 设置数据库查询返回不存在
 		mockShortUrlMap.EXPECT().FindOneByShortUrl(gomock.Any(), shortURL).Return(nil, errorx.New(errorx.CodeNotFound, "not found"))
 
-		l := NewShowLogic(context.Background(), svcCtx)
-		resp, err := l.Show(&types.ShowRequest{ShortUrl: shortURL})
+		l := NewResolveLogic(context.Background(), svcCtx)
+		resp, err := l.Resolve(&types.ResolveRequest{ShortCode: shortURL})
 
 		assert.Nil(t, resp)
 		assert.NotNil(t, err)
@@ -121,7 +121,7 @@ func TestShowLogic_Show(t *testing.T) {
 }
 
 // 测试过滤器检查函数
-func TestShowLogic_filter(t *testing.T) {
+func TestResolveLogic_filter(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -135,7 +135,7 @@ func TestShowLogic_filter(t *testing.T) {
 		shortURL := "abc123"
 		mockFilter.EXPECT().ExistsCtx(gomock.Any(), []byte(shortURL)).Return(true, nil)
 
-		l := &ShowLogic{ctx: context.Background(), svcCtx: svcCtx}
+		l := &ResolveLogic{ctx: context.Background(), svcCtx: svcCtx}
 		exists, err := l.filter(shortURL)
 
 		assert.True(t, exists)
@@ -146,7 +146,7 @@ func TestShowLogic_filter(t *testing.T) {
 		shortURL := "notExists"
 		mockFilter.EXPECT().ExistsCtx(gomock.Any(), []byte(shortURL)).Return(false, nil)
 
-		l := &ShowLogic{ctx: context.Background(), svcCtx: svcCtx}
+		l := &ResolveLogic{ctx: context.Background(), svcCtx: svcCtx}
 		exists, err := l.filter(shortURL)
 
 		assert.False(t, exists)
@@ -157,7 +157,7 @@ func TestShowLogic_filter(t *testing.T) {
 		shortURL := "error"
 		mockFilter.EXPECT().ExistsCtx(gomock.Any(), []byte(shortURL)).Return(false, errorx.New(errorx.CodeSystemError, "filter error"))
 
-		l := &ShowLogic{ctx: context.Background(), svcCtx: svcCtx}
+		l := &ResolveLogic{ctx: context.Background(), svcCtx: svcCtx}
 		exists, err := l.filter(shortURL)
 
 		assert.False(t, exists)
@@ -166,7 +166,7 @@ func TestShowLogic_filter(t *testing.T) {
 }
 
 // 测试查询长链接函数
-func TestShowLogic_queryLongUrlByShortUrl(t *testing.T) {
+func TestResolveLogic_queryLongUrlByShortUrl(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -184,7 +184,7 @@ func TestShowLogic_queryLongUrlByShortUrl(t *testing.T) {
 			LongUrl:  longURL,
 		}, nil)
 
-		l := &ShowLogic{ctx: context.Background(), svcCtx: svcCtx}
+		l := &ResolveLogic{ctx: context.Background(), svcCtx: svcCtx}
 		result, err := l.queryLongUrlByShortUrl(shortURL)
 
 		assert.Equal(t, longURL, result)
@@ -195,7 +195,7 @@ func TestShowLogic_queryLongUrlByShortUrl(t *testing.T) {
 		shortURL := "notFound"
 		mockShortUrlMap.EXPECT().FindOneByShortUrl(gomock.Any(), shortURL).Return(nil, errorx.New(errorx.CodeNotFound, "not found"))
 
-		l := &ShowLogic{ctx: context.Background(), svcCtx: svcCtx}
+		l := &ResolveLogic{ctx: context.Background(), svcCtx: svcCtx}
 		result, err := l.queryLongUrlByShortUrl(shortURL)
 
 		assert.Empty(t, result)
@@ -206,7 +206,7 @@ func TestShowLogic_queryLongUrlByShortUrl(t *testing.T) {
 		shortURL := "dbError"
 		mockShortUrlMap.EXPECT().FindOneByShortUrl(gomock.Any(), shortURL).Return(nil, errorx.New(errorx.CodeSystemError, "database error"))
 
-		l := &ShowLogic{ctx: context.Background(), svcCtx: svcCtx}
+		l := &ResolveLogic{ctx: context.Background(), svcCtx: svcCtx}
 		result, err := l.queryLongUrlByShortUrl(shortURL)
 
 		assert.Empty(t, result)

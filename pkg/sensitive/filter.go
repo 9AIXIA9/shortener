@@ -7,7 +7,7 @@ import (
 	"bufio"
 	"github.com/zeromicro/go-zero/core/logx"
 	"os"
-	"shortener/pkg/errorx"
+	"shortener/internal/types/errorx"
 	"sort"
 	"strings"
 	"sync"

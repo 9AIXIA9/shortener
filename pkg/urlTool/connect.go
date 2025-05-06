@@ -9,7 +9,7 @@ import (
 	"net"
 	"net/http"
 	"shortener/internal/config"
-	"shortener/pkg/errorx"
+	"shortener/internal/types/errorx"
 	"strings"
 	"time"
 )

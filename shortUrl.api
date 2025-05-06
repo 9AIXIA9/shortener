@@ -1,48 +1,59 @@
 syntax = "v1"
 
 info (
-	title:   "Short URL Service"
-	desc:    "High-performance URL shortening service"
+	title: "Short URL Service API Documentation"
+	desc: "High-performance URL shortening service with JWT authentication and rate limiting"
 	author:  "AIXIA"
-	version: "v1.1"
+	email: "906094554@qq.com"
+	version: "v1.2"
 )
 
-//将长链接转化为短链接
+// 短链生成请求
 type ShortenRequest {
+	// 需要缩短的长链接，需要符合URL格式
 	LongUrl string `json:"long_url" validate:"required,max=2048,validLongUrl"`
 }
 
+// 短链生成响应
 type ShortenResponse {
-	ShortUrl string `json:"short_url"`
+	// 生成的短链接标识符
+	ShortCode string `json:"short_code"`
 }
 
-//将短链接转化为长链接
-type ShowRequest {
-	ShortUrl string `path:"short_url" validate:"required,validShortUrl"`
+// 短链解析请求
+type ResolveRequest {
+	// 需要解析的短链接标识符
+	ShortCode string `path:"short_code" validate:"required,validShortUrl"`
 }
 
-type ShowResponse {
-	LongUrl string `json:"long_url"`
+// 短链解析响应
+type ResolveResponse {
+	// 原始的长链接地址
+	OriginalUrl string `json:"original_url"`
+	// 链接过期时间（ISO 8601格式）
+	ExpiresAt string `json:"expires_at,optional"`
 }
 
+// 公共API，无需认证
 @server (
-	prefix: /v1/shorturl
-	jwt:    Auth
-	limit:  100 //限流中间件
+	prefix:     /api/v1
+	middleware: Limit
 )
 service Shortener-api {
-	//转长链接为短链接
-	@handler ShortenHandler
+	// 解析短链接 - 通过短链接标识符获取原始长链接，无需认证
+	@handler Resolve
+	get /resolve/:short_code (ResolveRequest) returns (ResolveResponse)
+}
+
+// 用户API，需要认证
+@server (
+	prefix:     /api/v1
+	middleware: Limit
+	jwt: Auth
+)
+service Shortener-api {
+	// 创建短链接 - 通过长链接生成安全短链接，需要JWT认证
+	@handler Shorten
 	post /shorten (ShortenRequest) returns (ShortenResponse)
-}
-
-@server (
-	prefix: /v1/shorturl
-	limit:  100 //限流中间件
-)
-service Shortener-api {
-	//通过短链接访问长链接
-	@handler ShowHandler
-	get /:short_url (ShowRequest) returns (ShowResponse)
 }
 

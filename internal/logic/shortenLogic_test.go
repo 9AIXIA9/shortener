@@ -10,7 +10,7 @@ import (
 	repositoryMock "shortener/internal/repository/mock"
 	"shortener/internal/svc"
 	"shortener/internal/types"
-	"shortener/pkg/errorx"
+	"shortener/internal/types/errorx"
 	filterMock "shortener/pkg/filter/mock"
 	"shortener/pkg/md5"
 	sensitiveMock "shortener/pkg/sensitive/mock"
@@ -94,7 +94,7 @@ func TestShortenLogic_Shorten(t *testing.T) {
 
 		assert.Nil(t, err)
 		assert.NotNil(t, resp)
-		assert.Equal(t, svcCtx.Config.App.ShortUrlDomain+svcCtx.Config.App.ShortUrlPath+shortURL, resp.ShortUrl)
+		assert.Equal(t, svcCtx.Config.App.ShortUrlDomain+svcCtx.Config.App.ShortUrlPath+shortURL, resp.ShortCode)
 	})
 
 	// 测试场景四：新的长链接，需要生成短链接
@@ -122,7 +122,7 @@ func TestShortenLogic_Shorten(t *testing.T) {
 
 		assert.Nil(t, err)
 		assert.NotNil(t, resp)
-		assert.Contains(t, resp.ShortUrl, "example.com/short/")
+		assert.Contains(t, resp.ShortCode, "example.com/short/")
 	})
 
 	// 测试场景五：生成短链接时遇到敏感词

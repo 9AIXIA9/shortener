@@ -5,7 +5,7 @@ package database
 import (
 	"context"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
-	"shortener/pkg/errorx"
+	"shortener/internal/types/errorx"
 )
 
 const (

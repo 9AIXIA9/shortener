@@ -1,10 +1,10 @@
-package handler
+package format
 
 import (
 	"errors"
 	"github.com/zeromicro/go-zero/rest/httpx"
 	"net/http"
-	"shortener/pkg/errorx"
+	"shortener/internal/types/errorx"
 )
 
 // Response 统一响应结构

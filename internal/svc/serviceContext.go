@@ -1,14 +1,17 @@
 package svc
 
 import (
+	"github.com/zeromicro/go-zero/core/limit"
 	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/core/stores/redis"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
+	"github.com/zeromicro/go-zero/rest"
 	"shortener/internal/config"
+	"shortener/internal/middleware"
 	"shortener/internal/repository"
 	"shortener/internal/repository/cachex"
 	"shortener/internal/repository/database"
-	"shortener/pkg/errorx"
+	"shortener/internal/types/errorx"
 	"shortener/pkg/filter"
 	"shortener/pkg/sensitive"
 )
@@ -25,6 +28,10 @@ type ServiceContext struct {
 	ShortUrlMapRepository repository.ShortUrlMap
 	ShortCodeFilter       filter.Filter
 	SensitiveFilter       sensitive.Filter
+
+	Timeout rest.Middleware
+	Limit   rest.Middleware
+	Error   rest.Middleware
 }
 
 func NewServiceContext(c config.Config) *ServiceContext {
@@ -32,21 +39,7 @@ func NewServiceContext(c config.Config) *ServiceContext {
 	sequenceDB := sqlx.NewMysql(c.Sequence.Mysql.DSN())
 
 	// 创建Redis连接
-	redisConf := redis.RedisConf{
-		Host: c.Sequence.Redis.Addr,
-		Type: c.Sequence.Redis.Type,
-		Pass: c.Sequence.Redis.Password,
-	}
-	sequenceRedis, err := redis.NewRedis(redisConf)
-	if err != nil {
-		err = errorx.NewWithCause(errorx.CodeDatabaseError, "connect to redis failed", err)
-		logx.Severef("init service context failed,err:%v", err)
-	}
-
-	f, err := sensitive.NewFilter(sensitiveWordsPath, similarCharsPath, replaceRulesPath)
-	if err != nil {
-		logx.Severef("init service context failed,err:%v", err)
-	}
+	sequenceRedis := newRedis(c.Sequence.Redis)
 
 	// 创建数据库访问层
 	sequenceDatabase := database.NewMysqlSequenceDatabase(sequenceDB)
@@ -69,6 +62,17 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		LocalPatch:     c.Sequence.LocalPatch,
 	}
 
+	// 初始化限流器
+	limitRedis := newRedis(c.Limit.Redis)
+	tokenLimiter := limit.NewTokenLimiter(c.Limit.Rate, c.Limit.Burst, limitRedis, c.Limit.Key)
+
+	//初始化敏感词过滤器
+	f, err := sensitive.NewFilter(sensitiveWordsPath, similarCharsPath, replaceRulesPath)
+	if err != nil {
+		err = errorx.NewWithCause(errorx.CodeCacheError, "init sensitive words filter failed", err)
+		logx.Severef("get sensitive words filter failed,err:%v", err)
+	}
+
 	return &ServiceContext{
 		Config:                c,
 		ShortUrlMapRepository: repository.NewShortUrlMap(c.ShortUrlMap, c.CacheRedis),
@@ -80,5 +84,21 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		),
 		ShortCodeFilter: filter.NewBloomFilter(c.ShortUrlFilter),
 		SensitiveFilter: f,
+
+		Limit: middleware.NewLimitMiddleware(tokenLimiter).Handle,
 	}
+}
+
+func newRedis(conf config.RedisConf) *redis.Redis {
+	redisConf := redis.RedisConf{
+		Host: conf.Addr,
+		Type: conf.Type,
+		Pass: conf.Password,
+	}
+	r, err := redis.NewRedis(redisConf)
+	if err != nil {
+		err = errorx.NewWithCause(errorx.CodeCacheError, "connect to redis fail", err)
+		logx.Severef("init redis failed,conf:%v,err:%v", conf, err)
+	}
+	return r
 }

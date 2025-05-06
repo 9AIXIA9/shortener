@@ -6,7 +6,7 @@ import (
 	"github.com/zeromicro/go-zero/core/logx"
 	"shortener/internal/repository/cachex"
 	"shortener/internal/repository/database"
-	"shortener/pkg/errorx"
+	"shortener/internal/types/errorx"
 	"sync/atomic"
 	"time"
 )

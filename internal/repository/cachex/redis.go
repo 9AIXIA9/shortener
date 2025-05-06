@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/zeromicro/go-zero/core/stores/redis"
-	"shortener/pkg/errorx"
+	"shortener/internal/types/errorx"
 	"strconv"
 	"time"
 )

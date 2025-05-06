@@ -13,25 +13,31 @@ import (
 
 func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 	server.AddRoutes(
-		[]rest.Route{
-			{
-				Method:  http.MethodPost,
-				Path:    "/shorten",
-				Handler: ShortenHandler(serverCtx),
-			},
-		},
-		rest.WithJwt(serverCtx.Config.Auth.AccessSecret),
-		rest.WithPrefix("/v1/shorturl"),
+		rest.WithMiddlewares(
+			[]rest.Middleware{serverCtx.Limit},
+			[]rest.Route{
+				{
+					Method:  http.MethodGet,
+					Path:    "/resolve/:short_code",
+					Handler: ResolveHandler(serverCtx),
+				},
+			}...,
+		),
+		rest.WithPrefix("/api/v1"),
 	)
 
 	server.AddRoutes(
-		[]rest.Route{
-			{
-				Method:  http.MethodGet,
-				Path:    "/:short_url",
-				Handler: ShowHandler(serverCtx),
-			},
-		},
-		rest.WithPrefix("/v1/shorturl"),
+		rest.WithMiddlewares(
+			[]rest.Middleware{serverCtx.Limit},
+			[]rest.Route{
+				{
+					Method:  http.MethodPost,
+					Path:    "/shorten",
+					Handler: ShortenHandler(serverCtx),
+				},
+			}...,
+		),
+		rest.WithJwt(serverCtx.Config.Auth.AccessSecret),
+		rest.WithPrefix("/api/v1"),
 	)
 }
