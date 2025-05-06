@@ -1,0 +1,19 @@
+# .github/workflows/auto-approve.yml
+name: Auto-Approve PRs
+on:
+  pull_request:
+    types: [ opened, reopened, synchronize ]
+
+permissions:
+  pull-requests: write  # 必须赋予写入权限
+  contents: read
+
+jobs:
+  auto-approve:
+    runs-on: ubuntu-latest
+    if: github.actor != 'dependabot[bot]' # 排除 dependabot 创建的 PR，如果需要自动批准 dependabot 的 PR，请移除此行
+    steps:
+      - name: 自动批准 PR
+        uses: hmarr/auto-approve-action@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}  # 正确的参数名是 token 而不是 github-token
