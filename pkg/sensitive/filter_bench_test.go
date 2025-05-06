@@ -21,7 +21,10 @@ func BenchmarkContainsBadWord_NoMatch(b *testing.B) {
 	words := "admin\npassword\nbad\nword"
 	wordFile := createBenchmarkFile(b, words, "words.txt")
 
-	f := NewFilter(wordFile, "", "")
+	f, err := NewFilter(wordFile, "", "")
+	if err != nil {
+		b.Fatalf("创建过滤器失败: %v", err)
+	}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -34,7 +37,10 @@ func BenchmarkContainsBadWord_Match(b *testing.B) {
 	words := "admin\npassword\nbad\nword"
 	wordFile := createBenchmarkFile(b, words, "words.txt")
 
-	f := NewFilter(wordFile, "", "")
+	f, err := NewFilter(wordFile, "", "")
+	if err != nil {
+		b.Fatalf("创建过滤器失败: %v", err)
+	}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -50,7 +56,10 @@ func BenchmarkContainsBadWord_SimilarChar(b *testing.B) {
 	similarChars := "4=a\n1=i\n0=o"
 	similarFile := createBenchmarkFile(b, similarChars, "similar.txt")
 
-	f := NewFilter(wordFile, similarFile, "")
+	f, err := NewFilter(wordFile, similarFile, "")
+	if err != nil {
+		b.Fatalf("创建过滤器失败: %v", err)
+	}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -66,7 +75,10 @@ func BenchmarkContainsBadWord_MultiChar(b *testing.B) {
 	replaceRules := "vv=w\nph=f"
 	replaceFile := createBenchmarkFile(b, replaceRules, "replace.txt")
 
-	f := NewFilter(wordFile, "", replaceFile)
+	f, err := NewFilter(wordFile, "", replaceFile)
+	if err != nil {
+		b.Fatalf("创建过滤器失败: %v", err)
+	}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -82,13 +94,17 @@ func BenchmarkPreprocessText(b *testing.B) {
 	replaceRules := "vv=w\nph=f"
 	replaceFile := createBenchmarkFile(b, replaceRules, "replace.txt")
 
-	f := NewFilter("", similarFile, replaceFile).(*filter)
+	f, err := NewFilter("", similarFile, replaceFile)
+	if err != nil {
+		b.Fatalf("创建过滤器失败: %v", err)
+	}
+	fImpl := f.(*filter)
 
 	text := "This 1s 4 c0mpl3x t3xt vvith special ch4r4ct3rs like &*()_+|}{[]\\:;\"'<>,.?/~`!@#$%^"
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		f.preprocessText(text)
+		fImpl.preprocessText(text)
 	}
 }
 
@@ -104,10 +120,13 @@ func BenchmarkLoadSensitiveWords(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		f := NewFilter("", "", "")
-		err := f.(*filter).loadSensitiveWords(wordFile)
+		f, err := NewFilter("", "", "")
 		if err != nil {
-			panic(err)
+			b.Fatalf("创建过滤器失败: %v", err)
+		}
+		err = f.(*filter).loadSensitiveWords(wordFile)
+		if err != nil {
+			b.Fatalf("加载敏感词失败: %v", err)
 		}
 	}
 }
@@ -117,7 +136,10 @@ func BenchmarkLongTextProcessing(b *testing.B) {
 	words := "admin\npassword\nbad\nword"
 	wordFile := createBenchmarkFile(b, words, "words.txt")
 
-	f := NewFilter(wordFile, "", "")
+	f, err := NewFilter(wordFile, "", "")
+	if err != nil {
+		b.Fatalf("创建过滤器失败: %v", err)
+	}
 
 	// 创建一个较长的文本（重复10次）
 	longText := ""
@@ -147,7 +169,10 @@ func BenchmarkWithFullConfiguration(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		f := NewFilter(wordFile, similarFile, replaceFile)
+		f, err := NewFilter(wordFile, similarFile, replaceFile)
+		if err != nil {
+			b.Fatalf("创建过滤器失败: %v", err)
+		}
 		f.ContainsBadWord("7hi5 i5 4 7ex7 wi7h vvolf and phake w0rd5")
 	}
 }
@@ -163,7 +188,10 @@ func BenchmarkParallel(b *testing.B) {
 	replaceRules := "vv=w\nph=f"
 	replaceFile := createBenchmarkFile(b, replaceRules, "replace.txt")
 
-	f := NewFilter(wordFile, similarFile, replaceFile)
+	f, err := NewFilter(wordFile, similarFile, replaceFile)
+	if err != nil {
+		b.Fatalf("创建过滤器失败: %v", err)
+	}
 
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
