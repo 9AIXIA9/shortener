@@ -31,15 +31,10 @@ func NewShortenLogic(ctx context.Context, svcCtx *svc.ServiceContext, client url
 
 func (l *ShortenLogic) Shorten(req *types.ShortenRequest) (*types.ShortenResponse, error) {
 	//校验参数
-	isValidUrl, err := l.testConnectivity(req.LongUrl)
+	err := l.testConnectivity(req.LongUrl)
 	if err != nil {
 		return nil, err
 	}
-	if !isValidUrl {
-		return nil, errorx.New(errorx.CodeParamError, "failed to connect this URL")
-	}
-
-	logx.Infof("this URL is valid:%v", req.LongUrl)
 
 	isShortUrl := l.inShortUrlDomainPath(req.LongUrl)
 	if isShortUrl {
@@ -53,7 +48,7 @@ func (l *ShortenLogic) Shorten(req *types.ShortenRequest) (*types.ShortenRespons
 		return nil, err
 	}
 
-	//数据库查询MD5
+	//数据库查询是否已有短链
 	shortUrl, err := l.findShortUrlByMD5(m)
 	if errorx.Is(err, errorx.CodeNotFound) || len(shortUrl) == 0 {
 		//转链
@@ -88,11 +83,17 @@ func (l *ShortenLogic) Shorten(req *types.ShortenRequest) (*types.ShortenRespons
 		return &types.ShortenResponse{ShortCode: l.getFullShortLink(shortUrl)}, nil
 	}
 
-	return nil, errorx.New(errorx.CodeDatabaseError, "shortUrl is empty")
+	return nil, errorx.New(errorx.CodeSystemError, "shortUrl is empty")
 }
 
-func (l *ShortenLogic) testConnectivity(URL string) (bool, error) {
-	return l.client.Check(URL)
+func (l *ShortenLogic) testConnectivity(URL string) error {
+	if err := l.client.Check(URL); err != nil {
+		if errorx.Is(err, errorx.CodeTimeout) {
+			return errorx.Wrap(err, errorx.CodeTimeout, "the connection URL timed out")
+		}
+		return errorx.Wrap(err, errorx.CodeParamError, "invalid URL")
+	}
+	return nil
 }
 
 func (l *ShortenLogic) inShortUrlDomainPath(url string) bool {

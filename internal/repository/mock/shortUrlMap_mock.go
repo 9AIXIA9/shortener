@@ -11,10 +11,9 @@ package repository
 
 import (
 	context "context"
-	reflect "reflect"
-	model "shortener/internal/model"
-
 	gomock "go.uber.org/mock/gomock"
+	reflect "reflect"
+	"shortener/internal/model"
 )
 
 // MockShortUrlMap is a mock of ShortUrlMap interface.

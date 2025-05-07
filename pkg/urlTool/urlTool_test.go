@@ -1,190 +1,213 @@
 package urlTool
 
 import (
+	"errors"
+	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"
 	"shortener/internal/config"
 	"shortener/internal/types/errorx"
 	"testing"
 	"time"
-
-	"github.com/stretchr/testify/assert"
 )
 
-// TestGetDomainAndPath 测试URL解析函数
 func TestGetDomainAndPath(t *testing.T) {
 	tests := []struct {
-		name           string
-		input          string
-		expectDomain   string
-		expectBasePath string
+		name         string
+		url          string
+		wantDomain   string
+		wantBasePath string
 	}{
 		{
-			name:           "正常URL",
-			input:          "https://example.com/path/to/resource",
-			expectDomain:   "example.com",
-			expectBasePath: "path/to/resource",
+			name:         "完整URL",
+			url:          "https://example.com/path/to/resource",
+			wantDomain:   "example.com",
+			wantBasePath: "path/to/resource",
 		},
 		{
-			name:           "带查询参数的URL",
-			input:          "https://example.com/path?query=value",
-			expectDomain:   "example.com",
-			expectBasePath: "path",
+			name:         "带端口号的URL",
+			url:          "http://example.com:8080/path",
+			wantDomain:   "example.com:8080",
+			wantBasePath: "path",
 		},
 		{
-			name:           "无路径URL",
-			input:          "https://example.com",
-			expectDomain:   "example.com",
-			expectBasePath: "",
+			name:         "不带路径的URL",
+			url:          "https://example.com",
+			wantDomain:   "example.com",
+			wantBasePath: "",
 		},
 		{
-			name:           "空字符串",
-			input:          "",
-			expectDomain:   "",
-			expectBasePath: "",
+			name:         "带查询参数的URL",
+			url:          "https://example.com/path?key=value",
+			wantDomain:   "example.com",
+			wantBasePath: "path",
 		},
 		{
-			name:           "无效URL",
-			input:          "://invalid-url",
-			expectDomain:   "",
-			expectBasePath: "",
+			name:         "空URL",
+			url:          "",
+			wantDomain:   "",
+			wantBasePath: "",
+		},
+		{
+			name:         "无效URL",
+			url:          "not-a-url",
+			wantDomain:   "",
+			wantBasePath: "",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			domain, path := GetDomainAndPath(tt.input)
-			assert.Equal(t, tt.expectDomain, domain)
-			assert.Equal(t, tt.expectBasePath, path)
+			domain, path := GetDomainAndPath(tt.url)
+			assert.Equal(t, tt.wantDomain, domain, "域名不匹配")
+			assert.Equal(t, tt.wantBasePath, path, "路径不匹配")
 		})
 	}
 }
 
-// TestClientCheck 测试URL连接检查
-func TestClientCheck(t *testing.T) {
-	// 设置一个成功的测试服务器
+func TestClient_Check(t *testing.T) {
+	// 创建测试服务器
 	successServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer successServer.Close()
 
-	// 设置一个返回错误的测试服务器
-	errorServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusInternalServerError)
+	notFoundServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
 	}))
-	defer errorServer.Close()
+	defer notFoundServer.Close()
 
-	// 创建自定义配置的客户端
-	customConfig := config.ConnectConf{
+	// 创建测试配置
+	conf := config.ConnectConf{
 		DNSServer:       "8.8.8.8:53",
-		Timeout:         500 * time.Millisecond,
+		Timeout:         200 * time.Millisecond,
 		MaxRetries:      1,
-		MaxIdleConns:    50,
-		IdleConnTimeout: 20 * time.Second,
+		MaxIdleConns:    10,
+		IdleConnTimeout: 5 * time.Second,
 	}
-	client := NewClient(customConfig)
 
-	// 测试用例
+	client := NewClientWithConfig(conf)
+
 	tests := []struct {
 		name        string
 		url         string
-		expectValid bool
-		expectError bool
-		errorCode   errorx.Code
+		wantErr     bool
+		expectedErr error
 	}{
 		{
-			name:        "成功URL",
-			url:         successServer.URL,
-			expectValid: true,
-			expectError: false,
+			name:    "成功的URL检查",
+			url:     successServer.URL,
+			wantErr: false,
 		},
 		{
-			name:        "错误状态码URL",
-			url:         errorServer.URL,
-			expectValid: false,
-			expectError: true,
-			errorCode:   errorx.CodeTimeout,
+			name:        "404错误",
+			url:         notFoundServer.URL,
+			wantErr:     true,
+			expectedErr: errorx.New(errorx.CodeParamError, "abnormal http code"),
 		},
 		{
 			name:        "无效URL",
-			url:         "http://localhost:12345", // 假设这个端口没有服务
-			expectValid: false,
-			expectError: true,
-			errorCode:   errorx.CodeParamError,
+			url:         "http://invalid.domain.that.does.not.exist.example",
+			wantErr:     true,
+			expectedErr: errorx.NewWithCause(errorx.CodeParamError, "can't connect to this url", errors.New("")),
 		},
 		{
 			name:        "空URL",
 			url:         "",
-			expectValid: false,
-			expectError: true,
-			errorCode:   errorx.CodeParamError,
+			wantErr:     true,
+			expectedErr: errorx.New(errorx.CodeParamError, "URL is null"),
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			valid, err := client.Check(tt.url)
+			err := client.Check(tt.url)
 
-			if tt.expectError {
+			if tt.wantErr {
 				assert.Error(t, err)
-				if tt.errorCode != 0 {
-					assert.True(t, errorx.Is(err, tt.errorCode), "预期错误码 %v, 实际: %v", tt.errorCode, err)
+				if tt.expectedErr != nil {
+					var e *errorx.ErrorX
+					if errors.As(err, &e) {
+						assert.Contains(t, e.Error(), tt.expectedErr.Error())
+					} else {
+						t.Errorf("预期错误类型为errorx.ErrorX，实际为: %T", err)
+					}
 				}
 			} else {
 				assert.NoError(t, err)
 			}
-
-			assert.Equal(t, tt.expectValid, valid)
 		})
 	}
 }
 
-// TestNewClient 测试客户端创建
 func TestNewClient(t *testing.T) {
-	// 测试默认配置
-	client1 := NewClient()
-	assert.NotNil(t, client1)
+	// 测试默认配置创建客户端
+	client := NewClient()
+	assert.NotNil(t, client)
 
-	// 测试自定义配置
-	customConfig := config.ConnectConf{
+	// 测试自定义配置创建客户端
+	conf := config.ConnectConf{
 		DNSServer:       "1.1.1.1:53",
-		Timeout:         1 * time.Second,
+		Timeout:         500 * time.Millisecond,
 		MaxRetries:      3,
-		MaxIdleConns:    200,
-		IdleConnTimeout: 60 * time.Second,
+		MaxIdleConns:    50,
+		IdleConnTimeout: 10 * time.Second,
 	}
-	client2 := NewClient(customConfig)
-	assert.NotNil(t, client2)
 
-	// 检查两个客户端的类型
-	_, ok1 := client1.(*clientImpl)
-	assert.True(t, ok1, "client1应该是clientImpl类型")
-
-	_, ok2 := client2.(*clientImpl)
-	assert.True(t, ok2, "client2应该是clientImpl类型")
+	customClient := NewClientWithConfig(conf)
+	assert.NotNil(t, customClient)
 }
 
-// TestIsSuccessStatusCode 测试HTTP状态码检查
+func TestClientImpl_backoff(t *testing.T) {
+	conf := config.ConnectConf{
+		MaxRetries: 2,
+	}
+
+	client := &clientImpl{
+		config: conf,
+	}
+
+	// 测试退避逻辑
+	start := time.Now()
+	client.backoff(0) // 第一次重试
+	firstDuration := time.Since(start)
+
+	start = time.Now()
+	client.backoff(1) // 第二次重试
+	secondDuration := time.Since(start)
+
+	// 第二次退避时间应该大于第一次
+	assert.Greater(t, secondDuration.Milliseconds(), firstDuration.Milliseconds())
+
+	// 超过最大重试次数应该立即返回
+	start = time.Now()
+	client.backoff(2)
+	assert.Less(t, time.Since(start).Milliseconds(), int64(10)) // 应该几乎立即返回
+}
+
 func TestIsSuccessStatusCode(t *testing.T) {
 	tests := []struct {
-		name         string
-		statusCode   int
-		expectResult bool
+		name       string
+		statusCode int
+		wantErr    bool
 	}{
-		{"200 OK", 200, true},
-		{"201 Created", 201, true},
-		{"204 No Content", 204, true},
-		{"299 边界值", 299, true},
-		{"300 重定向", 300, false},
-		{"400 Bad Request", 400, false},
-		{"404 Not Found", 404, false},
-		{"500 Server Error", 500, false},
+		{"2xx状态码应成功", 200, false},
+		{"2xx状态码应成功", 201, false},
+		{"2xx状态码应成功", 299, false},
+		{"非2xx应失败", 199, true},
+		{"非2xx应失败", 300, true},
+		{"非2xx应失败", 404, true},
+		{"非2xx应失败", 500, true},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := isSuccessStatusCode(tt.statusCode)
-			assert.Equal(t, tt.expectResult, result)
+			err := isSuccessStatusCode(tt.statusCode)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
 		})
 	}
 }

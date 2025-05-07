@@ -2,9 +2,9 @@ package response
 
 import (
 	"errors"
-	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/rest/httpx"
 	"net/http"
+	"shortener/internal/errorhandler"
 	"shortener/internal/types/errorx"
 )
 
@@ -12,7 +12,6 @@ const (
 	systemErrorMsg   = "an error occurred inside the system"
 	databaseErrorMsg = "an error occurred inside the database"
 	cacheErrorMsg    = "an error occurred inside the cache"
-	logicErrorMsg    = "user business logic error"
 )
 
 // Response 统一响应结构
@@ -65,19 +64,18 @@ func handleError(err error) error {
 		// 保留原始错误信息和代码，但避免将敏感信息暴露给客户端
 		case errorx.CodeSystemError, errorx.CodeDatabaseError, errorx.CodeCacheError:
 			// 系统级错误使用通用消息
-			logx.Errorw(systemErrorMsg, logx.Field("err", targetError.Detail()))
+			errorhandler.SubmitWithPriority(err, errorhandler.PriorityCritical)
 			return errorx.New(targetError.Code, getPublicErrorMessage(targetError.Code))
 		case errorx.CodeParamError, errorx.CodeNotFound, errorx.CodeServiceUnavailable, errorx.CodeTimeout, errorx.CodeTooFrequent:
-			logx.Debugw(logicErrorMsg, logx.Field("msg", targetError.Msg))
+			errorhandler.SubmitWithPriority(err, errorhandler.PriorityInfo)
 			return errorx.New(targetError.Code, targetError.Msg)
 		default:
-			logx.Errorw("invalid error code", logx.Field("err", targetError.Detail()))
-			return errorx.New(errorx.CodeSystemError, systemErrorMsg)
+
 		}
 	}
 
-	// 非ErrorX类型
-	logx.Errorf("unrecognized error:%v", err)
+	// 非ErrorX类型 || 非预期类型
+	errorhandler.SubmitWithPriority(err, errorhandler.PriorityWarn)
 	return errorx.New(errorx.CodeSystemError, systemErrorMsg)
 }
 

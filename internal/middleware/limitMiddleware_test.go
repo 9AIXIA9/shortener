@@ -3,10 +3,10 @@ package middleware
 import (
 	"net/http"
 	"net/http/httptest"
+	limitmock "shortener/pkg/limit/mock"
 	"testing"
 
 	"go.uber.org/mock/gomock"
-	limitmock "shortener/pkg/limit/mock"
 )
 
 // 测试中间件创建函数

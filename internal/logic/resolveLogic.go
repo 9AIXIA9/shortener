@@ -53,7 +53,7 @@ func (l *ResolveLogic) Resolve(req *types.ResolveRequest) (*types.ResolveRespons
 func (l *ResolveLogic) filter(shortUrl string) (bool, error) {
 	exist, err := l.svcCtx.ShortCodeFilter.ExistsCtx(l.ctx, []byte(shortUrl))
 	if err != nil {
-		return false, errorx.Wrap(err, errorx.CodeSystemError, "fail to check if there is a shortURL through the filter")
+		return false, errorx.Wrap(err, errorx.CodeSystemError, "failed to check existence")
 	}
 
 	return exist, nil
@@ -68,9 +68,7 @@ func (l *ResolveLogic) queryLongUrlByShortUrl(shortUrl string) (string, error) {
 			return "", nil
 		}
 		// 其他错误统一包装
-		return "", errorx.Wrap(err, errorx.CodeSystemError, "query short link mapping failed").
-			WithContext(l.ctx).
-			WithMeta("shortUrl", shortUrl)
+		return "", err
 	}
 
 	if data == nil {

@@ -50,20 +50,20 @@ func TestShortenLogic_Shorten(t *testing.T) {
 	// 测试场景一：无效URL
 	t.Run("invalid_url", func(t *testing.T) {
 		longURL := "invalid-url"
-		mockURLClient.EXPECT().Check(longURL).Return(false, nil)
+		mockURLClient.EXPECT().Check(longURL).Return(errorx.New(errorx.CodeParamError, "mock error"))
 
 		l := NewShortenLogic(context.Background(), svcCtx, mockURLClient)
 		resp, err := l.Shorten(&types.ShortenRequest{LongUrl: longURL})
 
 		assert.Nil(t, resp)
 		assert.NotNil(t, err)
-		assert.Contains(t, err.Error(), "failed to connect this URL")
+		assert.Contains(t, err.Error(), "invalid URL")
 	})
 
 	// 测试场景二：已经是短链接
 	t.Run("already_short_url", func(t *testing.T) {
 		url := "http://example.com/short/abc123"
-		mockURLClient.EXPECT().Check(url).Return(true, nil)
+		mockURLClient.EXPECT().Check(url).Return(nil)
 
 		l := NewShortenLogic(context.Background(), svcCtx, mockURLClient)
 		resp, err := l.Shorten(&types.ShortenRequest{LongUrl: url})
@@ -82,7 +82,7 @@ func TestShortenLogic_Shorten(t *testing.T) {
 		correctMd5, _ := md5.Sum([]byte(longURL))
 
 		// 设置URL检查返回有效
-		mockURLClient.EXPECT().Check(longURL).Return(true, nil)
+		mockURLClient.EXPECT().Check(longURL).Return(nil)
 
 		// 使用正确计算出的MD5值
 		mockShortUrlMap.EXPECT().FindOneByMd5(gomock.Any(), correctMd5).Return(&model.ShortUrlMap{
@@ -102,7 +102,7 @@ func TestShortenLogic_Shorten(t *testing.T) {
 		longURL := "http://newtest.com/page"
 		correctMd5, _ := md5.Sum([]byte(longURL))
 
-		mockURLClient.EXPECT().Check(longURL).Return(true, nil)
+		mockURLClient.EXPECT().Check(longURL).Return(nil)
 		mockShortUrlMap.EXPECT().FindOneByMd5(gomock.Any(), correctMd5).Return(nil, errorx.New(errorx.CodeNotFound, "data is not found"))
 
 		// 期望生成序列号并转为短链接
@@ -130,7 +130,7 @@ func TestShortenLogic_Shorten(t *testing.T) {
 		longURL := "http://sensitive.com/page"
 		md5Hex, _ := md5.Sum([]byte(longURL))
 
-		mockURLClient.EXPECT().Check(longURL).Return(true, nil)
+		mockURLClient.EXPECT().Check(longURL).Return(nil)
 		mockShortUrlMap.EXPECT().FindOneByMd5(gomock.Any(), md5Hex).Return(nil, errorx.New(errorx.CodeNotFound, "data is not found"))
 
 		// 模拟5次尝试都生成了包含敏感词的短链接
@@ -157,22 +157,22 @@ func TestShortenLogic_testConnectivity(t *testing.T) {
 
 	t.Run("valid_url", func(t *testing.T) {
 		url := "http://valid.com"
-		mockURLClient.EXPECT().Check(url).Return(true, nil)
+		mockURLClient.EXPECT().Check(url).Return(nil)
 
 		l := &ShortenLogic{client: mockURLClient}
-		result, _ := l.testConnectivity(url)
+		result := l.testConnectivity(url)
 
-		assert.True(t, result)
+		assert.Nil(t, result)
 	})
 
 	t.Run("invalid_url", func(t *testing.T) {
 		url := "invalid-url"
-		mockURLClient.EXPECT().Check(url).Return(false, nil)
+		mockURLClient.EXPECT().Check(url).Return(errorx.New(errorx.CodeParamError, "invalid error"))
 
 		l := &ShortenLogic{client: mockURLClient}
-		result, _ := l.testConnectivity(url)
+		result := l.testConnectivity(url)
 
-		assert.False(t, result)
+		assert.NotNil(t, result)
 	})
 }
 

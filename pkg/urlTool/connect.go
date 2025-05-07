@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"shortener/internal/config"
+	"shortener/internal/errorhandler"
 	"shortener/internal/types/errorx"
 	"strings"
 	"time"
@@ -28,7 +29,7 @@ var (
 )
 
 type Client interface {
-	Check(url string) (bool, error)
+	Check(url string) error
 }
 
 type clientImpl struct {
@@ -36,12 +37,13 @@ type clientImpl struct {
 	client *http.Client
 }
 
-func NewClient(cfg ...config.ConnectConf) Client {
+func NewClient() Client {
 	conf := defaultConfig
-	if len(cfg) > 0 {
-		conf = cfg[0]
-	}
 
+	return NewClientWithConfig(conf)
+}
+
+func NewClientWithConfig(conf config.ConnectConf) Client {
 	dialer := &net.Dialer{
 		Resolver:  newResolver(conf.DNSServer),
 		KeepAlive: 30 * time.Second,
@@ -65,7 +67,6 @@ func NewClient(cfg ...config.ConnectConf) Client {
 		},
 		config: conf,
 	}
-
 }
 
 func newResolver(dnsServer string) *net.Resolver {
@@ -78,43 +79,38 @@ func newResolver(dnsServer string) *net.Resolver {
 	}
 }
 
-func (c *clientImpl) Check(URL string) (bool, error) {
+func (c *clientImpl) Check(URL string) error {
 	if len(URL) == 0 {
-		return false, errorx.New(errorx.CodeParamError, "URL is null")
+		return errorx.New(errorx.CodeParamError, "URL is null")
 	}
 
-	result, err := globalSF.Do(URL, func() (any, error) {
-		return c.checkWithRetry(URL)
+	_, err := globalSF.Do(URL, func() (any, error) {
+		return nil, c.checkWithRetry(URL)
 	})
 
-	return result.(bool), err
+	return err
 }
 
-func (c *clientImpl) checkWithRetry(url string) (success bool, err error) {
+func (c *clientImpl) checkWithRetry(url string) (err error) {
+	//多一轮循环用于判断返回值
 	for i := 0; i <= c.config.MaxRetries; i++ {
-		success, err = c.check(url)
-		if success && err == nil {
-			return true, nil
+		err = c.check(url)
+		if err == nil {
+			return nil
 		}
 
-		if err != nil && !errorx.Is(err, errorx.CodeTimeout) {
-			return false, err
+		if errorx.Is(err, errorx.CodeTimeout) {
+			c.backoff(i)
+			continue
 		}
 
-		if i < c.config.MaxRetries {
-			time.Sleep(time.Duration(50*i) * time.Millisecond) // 退避策略
-		}
+		return err
 	}
 
-	// 所有重试都失败后
-	if err != nil {
-		return false, err
-	}
-	// 处理没有明确错误但请求未成功的情况（如状态码非2xx）
-	return false, errorx.New(errorx.CodeTimeout, "check URL failed after all retries")
+	return err
 }
 
-func (c *clientImpl) check(url string) (bool, error) {
+func (c *clientImpl) check(url string) error {
 	defer func() {
 		if r := recover(); r != nil {
 			logx.Errorf("panic during URL check: %v, url: %s", r, url)
@@ -126,32 +122,43 @@ func (c *clientImpl) check(url string) (bool, error) {
 		// 检查是否是超时错误
 		var netErr net.Error
 		if errors.As(err, &netErr) && netErr.Timeout() {
-			return false, errorx.NewWithCause(errorx.CodeTimeout, "the connection to this url timed out", err)
+			return errorx.NewWithCause(errorx.CodeTimeout, "the connection timed out", err)
 		}
 
 		// 通过错误消息检查是否为超时
 		if strings.Contains(err.Error(), "timeout") ||
 			strings.Contains(err.Error(), "deadline exceeded") {
-			return false, errorx.NewWithCause(errorx.CodeTimeout, "the connection timed out", err)
+			return errorx.NewWithCause(errorx.CodeTimeout, "the connection timed out", err)
 		}
 
 		// 其他错误情况
-		return false, errorx.NewWithCause(errorx.CodeParamError, "can't connect to this url", err)
+		return errorx.NewWithCause(errorx.CodeParamError, "can't connect to this url", err)
 	}
 
 	if resp == nil {
-		return false, errorx.New(errorx.CodeParamError, "there is no reply")
+		return errorx.New(errorx.CodeParamError, "no response was received")
 	}
 
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
-			logx.Errorf("failed to close response body: %v", err)
+			errorhandler.SubmitWithPriority(errorx.NewWithCause(errorx.CodeSystemError, "failed to close the response body", err), errorhandler.DefaultPriority)
 		}
 	}()
 
-	return isSuccessStatusCode(resp.StatusCode), nil
+	return isSuccessStatusCode(resp.StatusCode)
 }
 
-func isSuccessStatusCode(statusCode int) bool {
-	return statusCode >= 200 && statusCode < 300
+func isSuccessStatusCode(statusCode int) error {
+	if statusCode >= 200 && statusCode < 300 {
+		return nil
+	}
+	return errorx.New(errorx.CodeParamError, "abnormal http code").WithMeta("httpCode", statusCode)
+}
+
+// 退避策略
+func (c *clientImpl) backoff(times int) {
+	if times >= c.config.MaxRetries {
+		return
+	}
+	time.Sleep(time.Duration(50*times) * time.Millisecond)
 }

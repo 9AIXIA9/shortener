@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"shortener/internal/repository/cachex"
+	cachexMock "shortener/internal/repository/cachex/mock"
+	databaseMock "shortener/internal/repository/database/mock"
 	"shortener/internal/types/errorx"
 	"sync"
 	"sync/atomic"
@@ -12,8 +14,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
-	cachexMock "shortener/internal/repository/cachex/mock"
-	databaseMock "shortener/internal/repository/database/mock"
 )
 
 func TestSequence_NextID(t *testing.T) {
