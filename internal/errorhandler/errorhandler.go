@@ -12,10 +12,20 @@ import (
 
 //todo:
 //错误处理策略不够灵活
-//缺少错误分类和优先级机制
 //没有错误过滤和聚合能力
 //无法根据错误类型选择不同的处理器
 //配置不够灵活
+
+type ErrorPriority uint8
+
+const (
+	PriorityDebug ErrorPriority = iota
+	PriorityInfo
+	PriorityWarn     // 默认级别，一般业务错误
+	PriorityError    // 需要关注的错误，但不影响系统运行
+	PriorityCritical // 关键错误，可能影响部分功能
+	PriorityFatal    // 致命错误，系统无法正常运行
+)
 
 var (
 	defaultErrorHandler *errorHandler
@@ -29,17 +39,45 @@ func Init(conf config.ErrorHandlerConf, consumers ...errorConsumer) {
 	})
 }
 
-func Submit(err error) {
+func SubmitWithPriority(err error, priority ErrorPriority) {
 	if defaultErrorHandler != nil {
-		defaultErrorHandler.submit(err)
+		defaultErrorHandler.submit(ConvertIntoErrorx(err), priority)
 	} else {
 		logx.Error("Error handler not initialized")
 	}
 }
 
+func Submit(err error) {
+	if err == nil {
+		return
+	}
+
+	ex := ConvertIntoErrorx(err)
+
+	priority := getDefaultPriority(ex.Code)
+
+	SubmitWithPriority(ex, priority)
+}
+
 func Shutdown() {
 	if defaultErrorHandler != nil {
 		defaultErrorHandler.shutdown()
+	}
+}
+
+// getDefaultPriority 根据错误代码获取默认优先级
+func getDefaultPriority(code errorx.Code) ErrorPriority {
+	switch code {
+	case errorx.CodeSystemError:
+		return PriorityCritical
+	case errorx.CodeDatabaseError, errorx.CodeCacheError:
+		return PriorityError
+	case errorx.CodeTimeout, errorx.CodeServiceUnavailable:
+		return PriorityWarn
+	case errorx.CodeParamError, errorx.CodeNotFound:
+		return PriorityInfo
+	default:
+		return PriorityWarn
 	}
 }
 
@@ -106,23 +144,27 @@ func (h *errorHandler) handleError(err *errorx.ErrorX) {
 	}
 }
 
-func (h *errorHandler) submit(err error) bool {
-	if err == nil {
-		return false
+func (h *errorHandler) submit(err *errorx.ErrorX, priority ErrorPriority) bool {
+	// 将优先级附加到错误元数据
+	err = err.WithMeta("priority", priority)
+
+	// 高优先级错误直接处理，绕过队列
+	if priority >= PriorityCritical {
+		go h.handleError(err)
+		return true
 	}
 
-	// 确保输入是 ErrorX 类型
-	var ex *errorx.ErrorX
-	if !errors.As(err, &ex) {
-		ex = errorx.NewWithCause(errorx.CodeSystemError, "unpackaged errors", err)
-	}
-
-	// 非阻塞方式提交错误
+	// 非阻塞方式提交普通错误
 	select {
-	case h.errorChan <- ex:
+	case h.errorChan <- err:
 		return true
 	default:
-		// 通道已满，记录丢弃
+		// 队列已满但是Error优先级以上的错误，阻塞提交
+		if priority >= PriorityError {
+			h.errorChan <- err
+			return true
+		}
+		// 低优先级错误丢弃
 		return false
 	}
 }
@@ -148,4 +190,13 @@ func (h *errorHandler) shutdown() {
 		// 这里我们已经调用了cancel()，所以工作协程最终会退出
 		// 虽然我们不等它们完成，但协程不会泄露
 	}
+}
+
+func ConvertIntoErrorx(err error) *errorx.ErrorX {
+	// 确保输入是 ErrorX 类型
+	var ex *errorx.ErrorX
+	if !errors.As(err, &ex) {
+		ex = errorx.NewWithCause(errorx.CodeSystemError, "unpackaged error", err)
+	}
+	return ex
 }
