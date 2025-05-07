@@ -136,6 +136,29 @@ func (e *ErrorX) WithContext(ctx context.Context) *ErrorX {
 	return e
 }
 
+// GetMeta retrieves a value from the error's metadata by its key.
+// If the metadata doesn't exist or the key isn't found, it returns false.
+//
+// Parameters:
+//   - key: The metadata key to look up
+//
+// Returns:
+//   - The associated value and true if found
+//   - nil and false if not found or metadata doesn't exist
+//
+// Example:
+//
+//	priority, ok := err.GetMeta("priority")
+//	if ok {
+//	    // Use the priority value
+//	}
+func (e *ErrorX) GetMeta(key string) (interface{}, bool) {
+	if e.Meta == nil {
+		return nil, false
+	}
+	return e.Meta.Get(contextKey(key))
+}
+
 // Unwrap supports error chain unwrapping for errors.Is/As compatibility.
 // This implements the unwrap interface used by errors.Is and errors.As.
 //

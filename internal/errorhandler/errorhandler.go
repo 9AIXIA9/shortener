@@ -10,6 +10,8 @@ import (
 	"time"
 )
 
+const priorityKey = "priority"
+
 //todo:
 //错误处理策略不够灵活
 //没有错误过滤和聚合能力
@@ -25,6 +27,8 @@ const (
 	PriorityError    // 需要关注的错误，但不影响系统运行
 	PriorityCritical // 关键错误，可能影响部分功能
 	PriorityFatal    // 致命错误，系统无法正常运行
+
+	DefaultPriority = PriorityWarn
 )
 
 var (
@@ -146,7 +150,7 @@ func (h *errorHandler) handleError(err *errorx.ErrorX) {
 
 func (h *errorHandler) submit(err *errorx.ErrorX, priority ErrorPriority) bool {
 	// 将优先级附加到错误元数据
-	err = err.WithMeta("priority", priority)
+	err = err.WithMeta(priorityKey, priority)
 
 	// 高优先级错误直接处理，绕过队列
 	if priority >= PriorityCritical {
@@ -165,6 +169,7 @@ func (h *errorHandler) submit(err *errorx.ErrorX, priority ErrorPriority) bool {
 			return true
 		}
 		// 低优先级错误丢弃
+		logx.Errorf("discard unhandled error:%v", err)
 		return false
 	}
 }

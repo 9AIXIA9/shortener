@@ -9,7 +9,6 @@ import (
 	"os/signal"
 	"shortener/internal/config"
 	"shortener/internal/errorhandler"
-	"shortener/internal/types/errorx"
 	"syscall"
 )
 
@@ -26,11 +25,7 @@ func main() {
 	conf.MustLoad(*configFile, &c, conf.UseEnv())
 
 	// 使用配置初始化错误处理器
-	errorhandler.Init(c.ErrorHandler, func(err *errorx.ErrorX) error {
-		logx.Error(err)
-		logx.ErrorStack()
-		return nil
-	}) // 添加消费者
+	errorhandler.Init(c.ErrorHandler, errorhandler.PriorityConsumer)
 
 	server := rest.MustNewServer(c.RestConf)
 
