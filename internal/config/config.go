@@ -18,6 +18,7 @@ type Config struct {
 	Auth           AuthConf
 	Connect        ConnectConf
 	Limit          LimitConf
+	ErrorHandler   ErrorHandlerConf
 }
 
 type AppConf struct {
@@ -81,6 +82,13 @@ type LimitConf struct {
 	Rate  int
 	Burst int
 	Key   string
+}
+
+// ErrorHandlerConf 错误处理器配置
+type ErrorHandlerConf struct {
+	BufferSize      int           // 错误缓冲区大小
+	MaxWorkers      int           // 最大工作协程数
+	ShutdownTimeout time.Duration // 关闭超时时间
 }
 
 func (db MysqlConf) DSN() string {

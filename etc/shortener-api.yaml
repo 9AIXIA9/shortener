@@ -76,3 +76,9 @@ Limit:
   Rate: ${LIMIT_RATE}
   Burst: ${LIMIT_BURST}
   Key: ${LIMIT_KEY}
+
+# 错误处理器配置
+ErrorHandler:
+  BufferSize: ${ERROR_HANDLER_BUFFER_SIZE}
+  MaxWorkers: ${ERROR_HANDLER_MAX_WORKERS}
+  ShutdownTimeout: ${ERROR_HANDLER_SHUTDOWN_TIMEOUT}
