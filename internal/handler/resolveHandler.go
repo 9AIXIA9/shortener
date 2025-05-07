@@ -3,7 +3,7 @@ package handler
 import (
 	"net/http"
 	"shortener/internal/logic"
-	"shortener/internal/types/format"
+	"shortener/internal/types/response"
 	"shortener/pkg/validate"
 
 	"github.com/zeromicro/go-zero/rest/httpx"
@@ -21,14 +21,14 @@ func ResolveHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 
 		//参数校验
 		if err := validate.Check(r.Context(), &req); err != nil {
-			format.ResponseError(w, err)
+			response.Error(w, err)
 			return
 		}
 
 		l := logic.NewResolveLogic(r.Context(), svcCtx)
 		resp, err := l.Resolve(&req)
 		if err != nil {
-			format.ResponseError(w, err)
+			response.Error(w, err)
 		} else {
 			http.Redirect(w, r, resp.OriginalUrl, http.StatusFound)
 		}
