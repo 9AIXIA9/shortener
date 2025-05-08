@@ -148,7 +148,7 @@ func TestSequence_ExternalCacheFillFailure(t *testing.T) {
 
 	mockDB := databaseMock.NewMockSequenceDatabase(ctrl)
 	mockExternalCache := cachexMock.NewMockSequenceCache(ctrl)
-	localCache := cachex.NewLocalSequenceCache()
+	localCache := cachex.NewLocalSequenceCache(1000)
 
 	seq := &sequence{
 		database:       mockDB,
@@ -215,7 +215,7 @@ func TestSequence_LocalCacheContinuousGet(t *testing.T) {
 
 	mockDB := databaseMock.NewMockSequenceDatabase(ctrl)
 	mockExternalCache := cachexMock.NewMockSequenceCache(ctrl)
-	localCache := cachex.NewLocalSequenceCache()
+	localCache := cachex.NewLocalSequenceCache(1000)
 
 	seq := &sequence{
 		database:       mockDB,
@@ -290,7 +290,7 @@ func TestNewSequence(t *testing.T) {
 
 	mockDB := databaseMock.NewMockSequenceDatabase(ctrl)
 	mockExternalCache := cachexMock.NewMockSequenceCache(ctrl)
-	localCache := cachex.NewLocalSequenceCache()
+	localCache := cachex.NewLocalSequenceCache(1000)
 
 	// 测试默认选项
 	t.Run("使用默认选项", func(t *testing.T) {
@@ -357,7 +357,7 @@ func TestSequence_ExternalCacheRecovery(t *testing.T) {
 
 	mockDB := databaseMock.NewMockSequenceDatabase(ctrl)
 	mockExternalCache := cachexMock.NewMockSequenceCache(ctrl)
-	localCache := cachex.NewLocalSequenceCache()
+	localCache := cachex.NewLocalSequenceCache(1000)
 
 	seq := &sequence{
 		database:       mockDB,
@@ -410,7 +410,7 @@ func TestSequence_BatchGetIDs(t *testing.T) {
 
 	mockDB := databaseMock.NewMockSequenceDatabase(ctrl)
 	mockExternalCache := cachexMock.NewMockSequenceCache(ctrl)
-	localCache := cachex.NewLocalSequenceCache()
+	localCache := cachex.NewLocalSequenceCache(1000)
 
 	seq := &sequence{
 		database:       mockDB,
@@ -458,7 +458,7 @@ func TestSequence_ConcurrentGetIDs(t *testing.T) {
 
 	mockDB := databaseMock.NewMockSequenceDatabase(ctrl)
 	mockExternalCache := cachexMock.NewMockSequenceCache(ctrl)
-	localCache := cachex.NewLocalSequenceCache()
+	localCache := cachex.NewLocalSequenceCache(1000)
 
 	// 添加计数器变量
 	var counter uint64
@@ -504,7 +504,7 @@ func TestSequence_EmptyIDsFromDatabase(t *testing.T) {
 
 	mockDB := databaseMock.NewMockSequenceDatabase(ctrl)
 	mockExternalCache := cachexMock.NewMockSequenceCache(ctrl)
-	localCache := cachex.NewLocalSequenceCache()
+	localCache := cachex.NewLocalSequenceCache(1000)
 
 	seq := &sequence{
 		database:       mockDB,

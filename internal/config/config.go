@@ -53,6 +53,7 @@ type SequenceConf struct {
 	CacheThreshold   int
 	LocalPatch       uint64
 	LocalThreshold   int
+	LocalCapacity    int
 	KeySequenceID    string
 	KeySequenceState string
 }

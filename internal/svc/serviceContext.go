@@ -48,7 +48,7 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		c.Sequence.KeySequenceID,
 		c.Sequence.KeySequenceState,
 	)
-	localCache := cachex.NewLocalSequenceCache()
+	localCache := cachex.NewLocalSequenceCache(c.Sequence.LocalCapacity)
 
 	// 创建序列生成器
 	sequenceOpts := repository.SequenceOptions{

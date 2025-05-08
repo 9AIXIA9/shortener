@@ -36,6 +36,7 @@ Sequence:
   CacheThreshold: ${SEQUENCE_CACHE_THRESHOLD}
   LocalPatch: ${SEQUENCE_LOCAL_PATCH}
   LocalThreshold: ${SEQUENCE_LOCAL_THRESHOLD}
+  LocalCapacity: ${SEQUENCE_LOCAL_CAPACITY}
   KeySequenceID: ${SEQUENCE_ID_KEY}
   KeySequenceState: ${SEQUENCE_STATE_KEY}
 
