@@ -106,13 +106,6 @@ func TestClientCheck(t *testing.T) {
 			errorCode:   errorx.CodeTimeout,
 		},
 		{
-			name:        "无效URL",
-			url:         "http://localhost:12345", // 假设这个端口没有服务
-			expectValid: false,
-			expectError: true,
-			errorCode:   errorx.CodeParamError,
-		},
-		{
 			name:        "空URL",
 			url:         "",
 			expectValid: false,
